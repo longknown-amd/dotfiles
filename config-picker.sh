@@ -2,9 +2,9 @@
 # Pick up dotfiles configs on a fresh Ubuntu machine.
 #
 # Usage (one-liner on a new box):
-#   curl -fsSL https://raw.githubusercontent.com/longknown-amd/dotfiles/main/config-picker | bash
+#   curl -fsSL https://raw.githubusercontent.com/longknown-amd/dotfiles/main/config-picker.sh | bash
 # or:
-#   bash config-picker
+#   bash config-picker.sh
 
 set -euo pipefail
 
