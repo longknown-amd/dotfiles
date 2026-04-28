@@ -1,0 +1,14 @@
+.zsh_secrets
+.zsh_history
+.bash_history
+tmux-client*.log
+.ssh/id_*
+.ssh/known_hosts
+.claude/.credentials.json
+.claude/projects/
+.claude/todos/
+.claude/shell-snapshots/
+.claude/statsig/
+.claude/ide/
+.cache/
+.local/
