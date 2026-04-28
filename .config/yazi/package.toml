@@ -1,0 +1,12 @@
+[[plugin.deps]]
+use = "yazi-rs/plugins:mime-ext"
+rev = "de33976"
+hash = "7b7dc677b58371da6fc63e4fcd134651"
+
+[[plugin.deps]]
+use = "AnirudhG07/rich-preview"
+rev = "573b275"
+hash = "c3e2871c9ef244fd181f203791f9b0d2"
+
+[flavor]
+deps = []
