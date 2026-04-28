@@ -31,7 +31,10 @@ command -v xclip >/dev/null  || need_pkgs+=(xclip)
 command -v axel >/dev/null   || need_pkgs+=(axel)
 if (( ${#need_pkgs[@]} )); then
     log "Installing: ${need_pkgs[*]}"
-    sudo apt-get update -qq
+    # Intentionally NOT running `apt-get update` here — refreshing the
+    # system-wide apt cache could surface unrelated upgrades on the host.
+    # If installs fail because the cache is stale, run `sudo apt-get update`
+    # manually and re-run this script.
     sudo apt-get install -y "${need_pkgs[@]}"
 fi
 
