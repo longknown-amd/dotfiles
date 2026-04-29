@@ -39,9 +39,9 @@ command -v git >/dev/null    || need_pkgs+=(git)
 command -v zsh >/dev/null    || need_pkgs+=(zsh)
 command -v curl >/dev/null   || need_pkgs+=(curl)
 command -v tmux >/dev/null   || need_pkgs+=(tmux)
-command -v nvim >/dev/null   || need_pkgs+=(neovim)
 command -v xclip >/dev/null  || need_pkgs+=(xclip)
 command -v axel >/dev/null   || need_pkgs+=(axel)
+# (neovim is handled separately below — apt's version is too old.)
 if (( ${#need_pkgs[@]} )); then
     log "Installing: ${need_pkgs[*]}"
     # Intentionally NOT running `apt-get update` here — refreshing the
@@ -49,6 +49,46 @@ if (( ${#need_pkgs[@]} )); then
     # If installs fail because the cache is stale, run `sudo apt-get update`
     # manually and re-run this script.
     sudo apt-get install -y "${need_pkgs[@]}"
+fi
+
+# 1a. Neovim (from upstream release if missing or too old) ------------------
+# Distro-packaged nvim lags badly: Ubuntu 22.04 ships 0.6, 24.04 ships 0.9,
+# but our nvim config (treesitter `main` branch, etc.) needs >= 0.11. So we
+# pull the official tarball from GitHub releases and install per-user under
+# ~/.local — no sudo, no host package state changes.
+NVIM_MIN="0.12.0"
+NVIM_PREFIX="$HOME/.local/share/neovim"
+mkdir -p "$HOME/.local/bin" "$NVIM_PREFIX"
+ensure_path_local_bin() { case ":$PATH:" in *":$HOME/.local/bin:"*) ;; *) export PATH="$HOME/.local/bin:$PATH" ;; esac; }
+ensure_path_local_bin
+nvim_cur=""
+if command -v nvim >/dev/null; then
+    nvim_cur=$(nvim --version | head -1 | awk '{print $2}' | sed 's/^v//')
+fi
+# version_ge "a" "b" → 0 if a >= b
+version_ge() { [[ "$(printf '%s\n%s\n' "$2" "$1" | sort -V | head -1)" == "$2" ]]; }
+if [[ -z "$nvim_cur" ]] || ! version_ge "$nvim_cur" "$NVIM_MIN"; then
+    case "$(uname -m)" in
+        x86_64)  nv_asset="nvim-linux-x86_64.tar.gz" ;;
+        aarch64) nv_asset="nvim-linux-arm64.tar.gz"  ;;
+        *)       die "Unsupported arch for nvim binary release: $(uname -m)" ;;
+    esac
+    log "Installing latest nvim from upstream ($nv_asset; current: ${nvim_cur:-none}, need >= $NVIM_MIN)"
+    nv_url="https://github.com/neovim/neovim/releases/latest/download/$nv_asset"
+    nv_tmp=$(mktemp -d)
+    curl -fsSL "$nv_url" -o "$nv_tmp/nvim.tar.gz"
+    tar -xzf "$nv_tmp/nvim.tar.gz" -C "$nv_tmp"
+    nv_extracted=$(find "$nv_tmp" -maxdepth 1 -mindepth 1 -type d -name 'nvim-linux-*' | head -1)
+    [[ -d "$nv_extracted" ]] || die "Could not find extracted nvim dir under $nv_tmp"
+    nv_dest="$NVIM_PREFIX/$(basename "$nv_extracted")"
+    rm -rf "$nv_dest"
+    mv "$nv_extracted" "$nv_dest"
+    ln -sfn "$nv_dest" "$NVIM_PREFIX/current"
+    ln -sfn "$NVIM_PREFIX/current/bin/nvim" "$HOME/.local/bin/nvim"
+    rm -rf "$nv_tmp"
+    log "Installed $("$HOME/.local/bin/nvim" --version | head -1) → ~/.local/bin/nvim"
+else
+    log "neovim $nvim_cur is recent enough (>= $NVIM_MIN)"
 fi
 
 # 1b. Rust toolchain (cargo) -------------------------------------------------
@@ -81,6 +121,17 @@ if ! command -v yazi >/dev/null; then
     cargo install --force yazi-build
 else
     log "yazi already installed: $(yazi --version | head -1)"
+fi
+
+# 1c2. tree-sitter CLI -------------------------------------------------------
+# Required by nvim-treesitter `main` branch (>= 0.26.1) — the rewrite
+# delegates parser compilation to this binary. Without it, parser installs
+# fail silently / with ENOENT 'tree-sitter'.
+if ! command -v tree-sitter >/dev/null; then
+    log "Installing tree-sitter-cli via cargo"
+    cargo install --locked tree-sitter-cli
+else
+    log "tree-sitter already installed: $(tree-sitter --version)"
 fi
 
 # 1d. oh-my-zsh + custom plugins ---------------------------------------------
@@ -184,7 +235,8 @@ if [[ "${KEEP_RUST:-0}" != "1" ]]; then
            "$HOME/.cargo/git" \
            /tmp/cargo-install* /tmp/rustup-init* 2>/dev/null || true
     # Drop rustup proxy binaries (cargo, rustc, ...) — they can't resolve a
-    # toolchain anymore. Keep yazi/ya and the env shim sourced by .zshenv.
+    # toolchain anymore. Keep yazi/ya/tree-sitter (cargo-installed standalone
+    # binaries) and the env shim sourced by .zshenv.
     for b in cargo cargo-clippy cargo-fmt cargo-miri clippy-driver rls \
              rust-analyzer rust-gdb rust-gdbgui rust-lldb rustc rustdoc \
              rustfmt rustup; do

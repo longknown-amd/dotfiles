@@ -1,8 +1,17 @@
-require('nvim-treesitter.configs').setup {
-    ensure_installed = { "vim", "vimdoc", "bash", "c", "cpp", "javascript", "python", "lua", "json" },
-    highlight = { enable = true },
-    indent = { enable = true },
-}
+-- nvim-treesitter `main` branch API (Neovim >= 0.11).
+-- The legacy `configs.setup{ ensure_installed=..., highlight=..., indent=... }`
+-- API is gone; install parsers explicitly and start highlight/indent via
+-- a FileType autocmd.
+local parsers = { "vim", "vimdoc", "bash", "c", "cpp", "javascript", "python", "lua", "json" }
+require('nvim-treesitter').install(parsers)
+
+vim.api.nvim_create_autocmd('FileType', {
+    pattern = parsers,
+    callback = function(args)
+        vim.treesitter.start(args.buf)
+        vim.bo[args.buf].indentexpr = "v:lua.require'nvim-treesitter'.indentexpr()"
+    end,
+})
 
 -- configure select options (lookahead)
 require("nvim-treesitter-textobjects").setup {
