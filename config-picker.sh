@@ -144,6 +144,9 @@ fi
 # fail silently / with ENOENT 'tree-sitter'.
 if ! command -v tree-sitter >/dev/null; then
     log "Installing tree-sitter-cli via cargo"
+    # tree-sitter-cli depends on rquickjs-sys → bindgen, which needs
+    # libclang.so at build time to generate Rust FFI bindings.
+    sudo apt-get install -y libclang-dev
     cargo install --locked tree-sitter-cli
 else
     log "tree-sitter already installed: $(tree-sitter --version)"
