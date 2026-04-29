@@ -172,6 +172,27 @@ if command -v nvim >/dev/null && [[ -f "$HOME/.config/nvim/init.lua" ]]; then
         warn "Lazy sync exited non-zero — open nvim to inspect"
 fi
 
+# 4e. Cleanup build intermediates --------------------------------------------
+# The Rust toolchain was only needed to compile yazi-build. Once `yazi` and
+# `ya` are in ~/.cargo/bin, ~/.rustup (~1.5 GB) and the cargo download caches
+# are dead weight. Set KEEP_RUST=1 to skip this if you'll do further Rust work.
+if [[ "${KEEP_RUST:-0}" != "1" ]]; then
+    log "Cleaning up build intermediates (set KEEP_RUST=1 to skip)"
+    before=$(du -sh "$HOME/.rustup" "$HOME/.cargo" 2>/dev/null | awk '{s+=$1} END {print s}' || echo "?")
+    rm -rf "$HOME/.rustup" \
+           "$HOME/.cargo/registry" \
+           "$HOME/.cargo/git" \
+           /tmp/cargo-install* /tmp/rustup-init* 2>/dev/null || true
+    # Drop rustup proxy binaries (cargo, rustc, ...) — they can't resolve a
+    # toolchain anymore. Keep yazi/ya and the env shim sourced by .zshenv.
+    for b in cargo cargo-clippy cargo-fmt cargo-miri clippy-driver rls \
+             rust-analyzer rust-gdb rust-gdbgui rust-lldb rustc rustdoc \
+             rustfmt rustup; do
+        rm -f "$HOME/.cargo/bin/$b"
+    done
+    log "Cleanup done"
+fi
+
 # 5. Done --------------------------------------------------------------------
 log "Done. Next steps:"
 cat <<'EOF'
