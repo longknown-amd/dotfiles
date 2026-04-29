@@ -197,25 +197,27 @@ log "Configuring repo (hide untracked, set ignore file)"
 dot config --local status.showUntrackedFiles no
 dot config --local core.excludesFile "$HOME/.config/git/dot-ignore"
 
-# 4. Checkout, backing up any conflicting files ------------------------------
-log "Checking out files into \$HOME"
-if ! dot checkout 2>/dev/null; then
-    warn "Conflicts detected — backing up to $BACKUP_DIR"
+# 4. Restore tracked files into $HOME ---------------------------------------
+# Use `checkout HEAD -- :/` (unambiguous pathspec from work-tree root) to
+# actually populate / restore tracked files. Plain `dot checkout` with no
+# pathspec only prints status — it does NOT restore deleted files.
+# Force-overwrites local modifications to tracked files; back them up first
+# so the user doesn't silently lose anything.
+log "Checking for locally modified tracked files"
+modified=$(dot diff --name-only HEAD 2>/dev/null || true)
+if [[ -n "$modified" ]]; then
+    warn "Local modifications detected — backing up to $BACKUP_DIR"
     mkdir -p "$BACKUP_DIR"
-    # Each conflicting path is listed after the warning header.
-    dot checkout 2>&1 \
-        | grep -E "^\s+\." \
-        | awk '{print $1}' \
-        | while read -r f; do
-              src="$HOME/$f"
-              [[ -e "$src" ]] || continue
-              dest="$BACKUP_DIR/$f"
-              mkdir -p "$(dirname "$dest")"
-              mv "$src" "$dest"
-          done
-    dot checkout
+    while IFS= read -r f; do
+        [[ -e "$HOME/$f" ]] || continue
+        dest="$BACKUP_DIR/$f"
+        mkdir -p "$(dirname "$dest")"
+        cp -a "$HOME/$f" "$dest"
+    done <<< "$modified"
     log "Backed-up originals are in $BACKUP_DIR"
 fi
+log "Restoring tracked files from HEAD into \$HOME"
+dot checkout HEAD -- :/
 
 # 4b. tmux plugins (TPM) -----------------------------------------------------
 TPM_DIR="$HOME/.tmux/plugins/tpm"
