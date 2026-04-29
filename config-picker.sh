@@ -94,13 +94,28 @@ fi
 # 1b. Rust toolchain (cargo) -------------------------------------------------
 # Some configs depend on cargo-installed binaries. Use rustup rather than apt
 # so we get an up-to-date toolchain.
-if ! command -v cargo >/dev/null; then
+# Source the env shim if present so cargo is on PATH for this script.
+[[ -f "$HOME/.cargo/env" ]] && . "$HOME/.cargo/env"
+install_rustup() {
     log "Installing Rust toolchain via rustup"
     sudo apt-get install -y build-essential pkg-config libssl-dev
     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
         | sh -s -- -y --default-toolchain stable --no-modify-path
     # shellcheck disable=SC1091
     . "$HOME/.cargo/env"
+}
+if ! command -v cargo >/dev/null; then
+    install_rustup
+elif ! cargo --version >/dev/null 2>&1; then
+    # Rustup proxies are present but no usable toolchain (e.g., a prior
+    # cleanup wiped ~/.rustup but left the proxies). Try `rustup default
+    # stable` first; if rustup itself is also broken, do a full reinstall.
+    warn "cargo proxy present but no toolchain configured — attempting recovery"
+    if command -v rustup >/dev/null && rustup default stable; then
+        log "Recovered: $(cargo --version)"
+    else
+        install_rustup
+    fi
 else
     log "cargo already installed: $(cargo --version)"
 fi
