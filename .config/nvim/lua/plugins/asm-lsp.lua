@@ -33,10 +33,13 @@ end
 
 return {
     {
-        -- Load the AMD GCN syntax plugin from the local fork directory.
+        -- AMD GCN syntax plugin. Now hosted on GitHub so destination boxes
+        -- can fetch it via lazy.nvim like any other plugin (was previously
+        -- a `dir = ...` pointing into a local asm-lsp fork checkout, which
+        -- only existed on the source machine).
         -- lazy = false ensures Lazy adds it to rtp at startup, before any
         -- FileType events fire, so runtime! syntax/amdgpu_gcn.vim works.
-        dir = "/home/thomas/projects/asm-lsp-amd/vim-amdgpu-syntax",
+        url = "https://github.com/longknown-amd/vim-amdgpu-syntax.git",
         name = "vim-amdgpu-syntax",
         lazy = false,
     },
