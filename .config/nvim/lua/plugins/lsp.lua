@@ -8,8 +8,11 @@ return {
     {
         "williamboman/mason-lspconfig.nvim",
         config = function()
+            -- Mason fetches the latest upstream release for each server
+            -- (clangd from llvm-project releases, pyright via npm). Run
+            -- :MasonUpdate to refresh later.
             require("mason-lspconfig").setup({
-                ensure_installed = {},
+                ensure_installed = { "clangd", "pyright" },
             })
         end
     },
