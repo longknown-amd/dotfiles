@@ -233,9 +233,20 @@ if command -v ya >/dev/null && [[ -f "$HOME/.config/yazi/package.toml" ]]; then
 fi
 
 # 4d. Neovim plugins (lazy.nvim) ---------------------------------------------
-# lazy.lua self-bootstraps on first launch; do it headlessly so LSPs,
-# treesitter parsers, and DAP adapters are ready before the first interactive run.
+# Pre-clone lazy.nvim from the shell rather than relying on lua/config/lazy.lua's
+# self-bootstrap: that bootstrap calls getchar() on failure, which hangs in
+# `--headless` mode if the clone fails. With lazy.nvim already on disk, the
+# headless sync just installs the plugin specs and exits cleanly.
 if command -v nvim >/dev/null && [[ -f "$HOME/.config/nvim/init.lua" ]]; then
+    LAZY_DIR="$HOME/.local/share/nvim/lazy/lazy.nvim"
+    if [[ ! -d "$LAZY_DIR" ]]; then
+        log "Bootstrapping lazy.nvim"
+        mkdir -p "$(dirname "$LAZY_DIR")"
+        git clone --filter=blob:none --branch=stable \
+            https://github.com/folke/lazy.nvim.git "$LAZY_DIR"
+    else
+        log "lazy.nvim already present"
+    fi
     log "Syncing nvim plugins headlessly (this can take a minute)"
     nvim --headless "+Lazy! sync" +qa 2>&1 | tail -5 || \
         warn "Lazy sync exited non-zero — open nvim to inspect"
