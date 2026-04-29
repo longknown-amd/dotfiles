@@ -157,9 +157,10 @@ log "Installing tmux plugins headlessly"
 
 # 4c. Yazi plugins -----------------------------------------------------------
 # Tracked package.toml lists code/mime-ext/rich-preview; fetch them now.
+# yazi v25+ renamed `ya pack` to `ya pkg`; install-all is now `ya pkg install`.
 if command -v ya >/dev/null && [[ -f "$HOME/.config/yazi/package.toml" ]]; then
-    log "Installing yazi plugins via ya pack -i"
-    ya pack -i || warn "ya pack -i had issues — check ~/.config/yazi/package.toml"
+    log "Installing yazi plugins via ya pkg install"
+    ya pkg install || warn "ya pkg install had issues — check ~/.config/yazi/package.toml"
 fi
 
 # 4d. Neovim plugins (lazy.nvim) ---------------------------------------------
