@@ -15,7 +15,11 @@ return {
     },
     {
         -- for lsp syntax highlighting
+        -- Pin to `master`: the new `main` branch dropped `nvim-treesitter.configs`,
+        -- which `config/treesitter.lua` still uses (`.configs.setup{...}`).
+        -- textobjects, in contrast, follows its `main` branch (new submodule API).
         "nvim-treesitter/nvim-treesitter",
+        branch = "master",
         dependencies = { "nvim-treesitter/nvim-treesitter-textobjects" },
         config = function()
             require('config.treesitter')
