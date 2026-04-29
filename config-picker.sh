@@ -91,11 +91,13 @@ else
     log "neovim $nvim_cur is recent enough (>= $NVIM_MIN)"
 fi
 
-# 1b. Rust toolchain (cargo) -------------------------------------------------
-# Some configs depend on cargo-installed binaries. Use rustup rather than apt
-# so we get an up-to-date toolchain.
-# Source the env shim if present so cargo is on PATH for this script.
+# 1b. Rust toolchain (cargo) — declared, installed lazily ------------------
+# We only install rustup when a later step actually needs cargo (yazi or
+# tree-sitter). On a re-run where both binaries already exist, cargo never
+# gets touched and the cleanup step won't wipe a pre-existing user install.
+# Source the env shim if present so an existing cargo lands on PATH.
 [[ -f "$HOME/.cargo/env" ]] && . "$HOME/.cargo/env"
+RUSTUP_INSTALLED_HERE=false
 install_rustup() {
     log "Installing Rust toolchain via rustup"
     sudo apt-get install -y build-essential pkg-config libssl-dev
@@ -103,27 +105,29 @@ install_rustup() {
         | sh -s -- -y --default-toolchain stable --no-modify-path
     # shellcheck disable=SC1091
     . "$HOME/.cargo/env"
+    RUSTUP_INSTALLED_HERE=true
 }
-if ! command -v cargo >/dev/null; then
-    install_rustup
-elif ! cargo --version >/dev/null 2>&1; then
-    # Rustup proxies are present but no usable toolchain (e.g., a prior
-    # cleanup wiped ~/.rustup but left the proxies). Try `rustup default
-    # stable` first; if rustup itself is also broken, do a full reinstall.
-    warn "cargo proxy present but no toolchain configured — attempting recovery"
-    if command -v rustup >/dev/null && rustup default stable; then
-        log "Recovered: $(cargo --version)"
-    else
-        install_rustup
+ensure_cargo() {
+    if command -v cargo >/dev/null && cargo --version >/dev/null 2>&1; then
+        return 0
     fi
-else
-    log "cargo already installed: $(cargo --version)"
-fi
+    if command -v cargo >/dev/null; then
+        # Proxy present but no usable toolchain (e.g., prior cleanup wiped
+        # ~/.rustup but left the proxies). Try recovery first.
+        warn "cargo proxy present but no toolchain configured — attempting recovery"
+        if command -v rustup >/dev/null && rustup default stable; then
+            log "Recovered: $(cargo --version)"
+            return 0
+        fi
+    fi
+    install_rustup
+}
 
 # 1c. Yazi file manager ------------------------------------------------------
 # Installed via cargo so we get a recent build matching the tracked
 # ~/.config/yazi/ plugins.
 if ! command -v yazi >/dev/null; then
+    ensure_cargo
     log "Installing yazi (via yazi-build meta-crate) via cargo"
     # ffmpeg/7zip/jq/poppler/fd/ripgrep/fzf/zoxide/imagemagick are yazi's
     # recommended runtime deps for previews and integrations.
@@ -143,6 +147,7 @@ fi
 # delegates parser compilation to this binary. Without it, parser installs
 # fail silently / with ENOENT 'tree-sitter'.
 if ! command -v tree-sitter >/dev/null; then
+    ensure_cargo
     log "Installing tree-sitter-cli via cargo"
     # tree-sitter-cli depends on rquickjs-sys → bindgen, which needs
     # libclang.so at build time to generate Rust FFI bindings.
@@ -253,10 +258,12 @@ if command -v nvim >/dev/null && [[ -f "$HOME/.config/nvim/init.lua" ]]; then
 fi
 
 # 4e. Cleanup build intermediates --------------------------------------------
-# The Rust toolchain was only needed to compile yazi-build. Once `yazi` and
-# `ya` are in ~/.cargo/bin, ~/.rustup (~1.5 GB) and the cargo download caches
-# are dead weight. Set KEEP_RUST=1 to skip this if you'll do further Rust work.
-if [[ "${KEEP_RUST:-0}" != "1" ]]; then
+# The Rust toolchain was only needed to compile yazi-build / tree-sitter-cli.
+# Once those binaries are in ~/.cargo/bin, ~/.rustup (~1.5 GB) and the cargo
+# download caches are dead weight.
+# Only clean up if WE installed rustup this run — never wipe a pre-existing
+# user install. Set KEEP_RUST=1 to force-skip even when we did install it.
+if $RUSTUP_INSTALLED_HERE && [[ "${KEEP_RUST:-0}" != "1" ]]; then
     log "Cleaning up build intermediates (set KEEP_RUST=1 to skip)"
     before=$(du -sh "$HOME/.rustup" "$HOME/.cargo" 2>/dev/null | awk '{s+=$1} END {print s}' || echo "?")
     rm -rf "$HOME/.rustup" \
