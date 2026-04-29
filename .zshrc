@@ -109,7 +109,7 @@ alias dirs='dirs -v'
 alias axels='axel -a -n 8'
 alias copy="tr -d '\n' | xclip"
 export LD_LIBRARY_PATH=/usr/local/lib:/opt/rocm/lib
-export PATH="$PATH:$HOME/.cargo/bin:/opt/rocm/bin"
+export PATH="$HOME/.cargo/bin:$HOME/.local/bin:/opt/rocm/bin:$PATH"
 export EDITOR=nvim
 setopt extended_glob
 setopt dot_glob
@@ -138,8 +138,6 @@ fi
 unset __conda_setup
 # <<< conda initialize <<<
 
-
-export PATH="$HOME/.local/bin:$PATH"
 
 mkdocs0() {
   local port="${1:-8000}"
