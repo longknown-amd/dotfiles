@@ -91,6 +91,48 @@ else
     log "neovim $nvim_cur is recent enough (>= $NVIM_MIN)"
 fi
 
+# 1a2. Node.js / npm (for mason to install pyright et al.) -----------------
+# Mason installs npm-based LSPs (pyright, bash-language-server) via npm.
+# Distro nodejs lags badly (Ubuntu 22.04 ships v12, too old for current
+# pyright). Pull the official Linux tarball from nodejs.org per-user.
+NODE_MIN="18.0.0"
+NODE_PREFIX="$HOME/.local/share/node"
+node_cur=""
+if command -v node >/dev/null; then
+    node_cur=$(node --version | sed 's/^v//')
+fi
+if [[ -z "$node_cur" ]] || ! version_ge "$node_cur" "$NODE_MIN"; then
+    case "$(uname -m)" in
+        x86_64)  nd_arch="linux-x64" ;;
+        aarch64) nd_arch="linux-arm64" ;;
+        *)       die "Unsupported arch for Node.js binary: $(uname -m)" ;;
+    esac
+    # `xz` is needed to extract Node's .tar.xz; install if missing.
+    command -v xz >/dev/null || sudo apt-get install -y xz-utils
+    log "Resolving latest Node.js LTS from nodejs.org"
+    nd_lts=$(curl -fsSL https://nodejs.org/dist/index.json \
+        | python3 -c "import json,sys; print(next(x for x in json.load(sys.stdin) if x['lts'])['version'])")
+    log "Installing Node.js $nd_lts ($nd_arch; current: ${node_cur:-none}, need >= $NODE_MIN)"
+    nd_tmp=$(mktemp -d)
+    curl -fsSL "https://nodejs.org/dist/$nd_lts/node-$nd_lts-$nd_arch.tar.xz" -o "$nd_tmp/node.tar.xz"
+    tar -xJf "$nd_tmp/node.tar.xz" -C "$nd_tmp"
+    nd_extracted=$(find "$nd_tmp" -maxdepth 1 -mindepth 1 -type d -name "node-*" | head -1)
+    [[ -d "$nd_extracted" ]] || die "Could not find extracted node dir under $nd_tmp"
+    mkdir -p "$NODE_PREFIX"
+    nd_dest="$NODE_PREFIX/$(basename "$nd_extracted")"
+    rm -rf "$nd_dest"
+    mv "$nd_extracted" "$nd_dest"
+    ln -sfn "$nd_dest" "$NODE_PREFIX/current"
+    for b in node npm npx corepack; do
+        [[ -e "$NODE_PREFIX/current/bin/$b" ]] && \
+            ln -sfn "$NODE_PREFIX/current/bin/$b" "$HOME/.local/bin/$b"
+    done
+    rm -rf "$nd_tmp"
+    log "Installed $("$HOME/.local/bin/node" --version) → ~/.local/bin/{node,npm,npx}"
+else
+    log "node $node_cur is recent enough (>= $NODE_MIN)"
+fi
+
 # 1b. Rust toolchain (cargo) — declared, installed lazily ------------------
 # We only install rustup when a later step actually needs cargo (yazi or
 # tree-sitter). On a re-run where both binaries already exist, cargo never
