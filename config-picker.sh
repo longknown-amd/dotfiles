@@ -69,12 +69,16 @@ fi
 # Installed via cargo so we get a recent build matching the tracked
 # ~/.config/yazi/ plugins.
 if ! command -v yazi >/dev/null; then
-    log "Installing yazi (yazi-fm + yazi-cli) via cargo"
+    log "Installing yazi (via yazi-build meta-crate) via cargo"
     # ffmpeg/7zip/jq/poppler/fd/ripgrep/fzf/zoxide/imagemagick are yazi's
     # recommended runtime deps for previews and integrations.
     sudo apt-get install -y \
         ffmpeg p7zip-full jq poppler-utils fd-find ripgrep fzf zoxide imagemagick
-    cargo install --locked yazi-fm yazi-cli
+    # As of yazi v25+, `yazi-fm`/`yazi-cli` panic in their build scripts and
+    # demand the `yazi-build` meta-crate (resolves both with consistent
+    # features). Don't pass --locked: yazi-build's Cargo.lock pins a yanked
+    # core2 0.4.0, so let cargo resolve a current version.
+    cargo install --force yazi-build
 else
     log "yazi already installed: $(yazi --version | head -1)"
 fi
