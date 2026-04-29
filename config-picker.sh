@@ -19,6 +19,19 @@ log()  { printf '\033[1;34m==>\033[0m %s\n' "$*"; }
 warn() { printf '\033[1;33m!! \033[0m %s\n' "$*" >&2; }
 die()  { printf '\033[1;31mxx \033[0m %s\n' "$*" >&2; exit 1; }
 
+# 0. Raise FD limit ----------------------------------------------------------
+# Default Ubuntu soft limit (1024) is too low for rustc's parallel codegen on
+# large dep graphs — yazi triggers EMFILE in rustix's build script. Bump the
+# soft limit for this script's process tree only (hard limit is unchanged).
+fd_hard=$(ulimit -Hn)
+fd_target=65536
+(( fd_hard < fd_target )) && fd_target=$fd_hard
+if ulimit -Sn "$fd_target" 2>/dev/null; then
+    log "FD soft limit raised to $(ulimit -Sn) (hard: $fd_hard)"
+else
+    warn "Could not raise FD limit (current: $(ulimit -Sn))"
+fi
+
 # 1. Prerequisites -----------------------------------------------------------
 log "Checking prerequisites"
 need_pkgs=()
