@@ -8,6 +8,16 @@
 
 set -euo pipefail
 
+# Make every apt-get call below truly unattended:
+#   DEBIAN_FRONTEND=noninteractive  — suppresses dpkg's interactive prompts
+#       (config-file change dialogs, service-restart confirmations, etc.)
+#   NEEDRESTART_SUSPEND=1           — makes needrestart a no-op for this run.
+#       On Ubuntu 22.04+ needrestart fires after every apt install and pops
+#       a whiptail dialog about pending kernel upgrades / services to restart.
+#       That dialog blocks `curl … | bash` invocations indefinitely.
+export DEBIAN_FRONTEND=noninteractive
+export NEEDRESTART_SUSPEND=1
+
 REPO_URL="git@github.com:longknown-amd/dotfiles.git"
 REPO_URL_HTTPS="https://github.com/longknown-amd/dotfiles.git"
 DOT_DIR="$HOME/.dotfiles"
