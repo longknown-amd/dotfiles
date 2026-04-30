@@ -60,8 +60,10 @@ If a pre-commit hook fails, fix the underlying issue and create a NEW commit —
 This is mandatory and applies on every push, regardless of how the skill was invoked. The remote may have advanced from another machine since your last sync.
 
 ```sh
-# Refresh the cached remote-tracking ref.
-git --git-dir=$HOME/.dotfiles fetch origin main
+# Refresh the cached remote-tracking ref. Use the explicit refspec form so
+# this works even if remote.origin.fetch isn't configured (a real gotcha on
+# bare-repo dotfiles setups — see Pitfalls).
+git --git-dir=$HOME/.dotfiles fetch origin main:refs/remotes/origin/main
 
 # Compute divergence.
 ahead=$(git --git-dir=$HOME/.dotfiles rev-list --count origin/main..HEAD)
@@ -110,3 +112,4 @@ Tell the user the commit SHA(s), files changed, and whether it was pushed. If th
 | Skipping step 5 (the pre-push fetch) | This is exactly how you get a "rejected — fetch first" error and have to recover manually. Always fetch before pushing, even if you `git pull`-ed at the start of the session — the remote can advance during the work. |
 | Auto-resolving rebase conflicts | Stop and show the user. Conflict resolution requires intent the skill can't infer. |
 | First push of a brand-new branch | `git push --set-upstream origin main` is needed once to establish tracking. After that, plain `git push` works. |
+| `git fetch origin main` doesn't update `origin/main` | The remote may be missing a fetch refspec (`remote.origin.fetch`). Use `git fetch origin main:refs/remotes/origin/main` (explicit refspec) — works regardless of config. The one-time fix to make plain `fetch` behave: `git --git-dir=$HOME/.dotfiles config --add remote.origin.fetch '+refs/heads/*:refs/remotes/origin/*'`. |
