@@ -40,7 +40,10 @@ command -v zsh >/dev/null    || need_pkgs+=(zsh)
 command -v curl >/dev/null   || need_pkgs+=(curl)
 command -v tmux >/dev/null   || need_pkgs+=(tmux)
 command -v xclip >/dev/null  || need_pkgs+=(xclip)
+command -v xsel >/dev/null   || need_pkgs+=(xsel)
 command -v axel >/dev/null   || need_pkgs+=(axel)
+command -v fzf >/dev/null    || need_pkgs+=(fzf)
+command -v lldb-dap >/dev/null || need_pkgs+=(lldb)
 # (neovim is handled separately below — apt's version is too old.)
 if (( ${#need_pkgs[@]} )); then
     log "Installing: ${need_pkgs[*]}"
@@ -133,6 +136,34 @@ else
     log "node $node_cur is recent enough (>= $NODE_MIN)"
 fi
 
+# 1a3. Python CLI tools ------------------------------------------------------
+# rich-cli: invoked by yazi's rich-preview plugin (markdown/json/csv/etc).
+# debugpy:  imported by nvim DAP-Python (`python -m debugpy.adapter`).
+# rich-cli is a CLI app — install via pipx (isolated venv on $PATH).
+# debugpy is a library nvim's `python` must `import` — prefer the apt
+# package (puts it in system python's site-packages, which the user's
+# `python` typically still resolves via stdlib path); fall back to
+# `pip install --user` with PEP 668 escape hatch on bare Ubuntu 24.04+.
+if ! command -v pipx >/dev/null; then
+    log "Installing pipx (for rich-cli)"
+    sudo apt-get install -y pipx
+    pipx ensurepath >/dev/null 2>&1 || true
+fi
+if ! pipx list 2>/dev/null | grep -qE '^[[:space:]]*package rich-cli '; then
+    log "Installing rich-cli via pipx"
+    pipx install rich-cli
+else
+    log "rich-cli already installed (pipx)"
+fi
+if ! python3 -c 'import debugpy' 2>/dev/null; then
+    log "Installing debugpy (python3-debugpy via apt, pip --user fallback)"
+    sudo apt-get install -y python3-debugpy 2>/dev/null \
+        || python3 -m pip install --user --break-system-packages debugpy \
+        || python3 -m pip install --user debugpy
+else
+    log "debugpy already importable in system python3"
+fi
+
 # 1b. Rust toolchain (cargo) — declared, installed lazily ------------------
 # We only install rustup when a later step actually needs cargo (yazi or
 # tree-sitter). On a re-run where both binaries already exist, cargo never
@@ -171,10 +202,11 @@ ensure_cargo() {
 if ! command -v yazi >/dev/null; then
     ensure_cargo
     log "Installing yazi (via yazi-build meta-crate) via cargo"
-    # ffmpeg/7zip/jq/poppler/fd/ripgrep/fzf/zoxide/imagemagick are yazi's
-    # recommended runtime deps for previews and integrations.
+    # ffmpeg/7zip/jq/poppler/fd/ripgrep/zoxide/imagemagick are yazi's
+    # recommended runtime deps for previews and integrations. (fzf is in the
+    # top-level prereq block since .zshrc also depends on it.)
     sudo apt-get install -y \
-        ffmpeg p7zip-full jq poppler-utils fd-find ripgrep fzf zoxide imagemagick
+        ffmpeg p7zip-full jq poppler-utils fd-find ripgrep zoxide imagemagick
     # As of yazi v25+, `yazi-fm`/`yazi-cli` panic in their build scripts and
     # demand the `yazi-build` meta-crate (resolves both with consistent
     # features). Don't pass --locked: yazi-build's Cargo.lock pins a yanked
