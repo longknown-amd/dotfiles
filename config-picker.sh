@@ -313,13 +313,17 @@ else
     git -C "$TPM_DIR" pull --ff-only --quiet || true
 fi
 log "Installing tmux plugins headlessly"
-# TPM normally reads TMUX_PLUGIN_MANAGER_PATH from a running tmux server (set
-# via the `run '~/.tmux/plugins/tpm/tpm'` line in .tmux.conf). On a fresh box
-# there's no running server; on a previously-configured box a stale tmux from
-# the old config is still running with the old environment. Export the var
-# directly so install_plugins works in either case without touching tmux.
-TMUX_PLUGIN_MANAGER_PATH="$HOME/.tmux/plugins/" \
-    "$TPM_DIR/bin/install_plugins" >/dev/null
+# TPM's install_plugins reads TMUX_PLUGIN_MANAGER_PATH via
+# `tmux show-environment -g` — it does NOT consult the shell env. So we need
+# a running tmux server that has the variable set globally:
+#   - `tmux start-server` is a no-op if one's already running (e.g. an old
+#     session from a pre-bootstrap tmux config) and starts a fresh server
+#     otherwise. No new sessions are created.
+#   - `tmux set-environment -g` injects the variable globally without
+#     touching any existing sessions' environments.
+tmux start-server
+tmux set-environment -g TMUX_PLUGIN_MANAGER_PATH "$HOME/.tmux/plugins/"
+"$TPM_DIR/bin/install_plugins" >/dev/null
 
 # 4c. Yazi plugins -----------------------------------------------------------
 # Tracked package.toml lists code/mime-ext/rich-preview; fetch them now.
