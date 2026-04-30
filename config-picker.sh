@@ -303,7 +303,13 @@ else
     git -C "$TPM_DIR" pull --ff-only --quiet || true
 fi
 log "Installing tmux plugins headlessly"
-"$TPM_DIR/bin/install_plugins" >/dev/null
+# TPM normally reads TMUX_PLUGIN_MANAGER_PATH from a running tmux server (set
+# via the `run '~/.tmux/plugins/tpm/tpm'` line in .tmux.conf). On a fresh box
+# there's no running server; on a previously-configured box a stale tmux from
+# the old config is still running with the old environment. Export the var
+# directly so install_plugins works in either case without touching tmux.
+TMUX_PLUGIN_MANAGER_PATH="$HOME/.tmux/plugins/" \
+    "$TPM_DIR/bin/install_plugins" >/dev/null
 
 # 4c. Yazi plugins -----------------------------------------------------------
 # Tracked package.toml lists code/mime-ext/rich-preview; fetch them now.
