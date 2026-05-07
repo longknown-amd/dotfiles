@@ -149,3 +149,8 @@ mkdocs0() {
 [ -f ~/.zsh_secrets ] && source ~/.zsh_secrets
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
 alias dot='git --git-dir=$HOME/.dotfiles --work-tree=$HOME'
+export DOCKER_UID=$(id -u)
+export DOCKER_GID=$(stat -c %g "$HOME")
+
+alias dc='docker compose'
+alias dcr='docker compose run --rm dev'
