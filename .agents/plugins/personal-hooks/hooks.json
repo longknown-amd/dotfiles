@@ -8,7 +8,7 @@
         },
         {
           "type": "command",
-          "command": "$HOME/plugins/personal-hooks/scripts/dotfiles-dirty-check.sh"
+          "command": "$HOME/.agents/plugins/personal-hooks/scripts/dotfiles-dirty-check.sh"
         }
       ]
     }

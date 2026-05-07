@@ -16,7 +16,7 @@ The user maintains their `$HOME` configuration in a **bare git repo** at
 `git@github.com-longknown:longknown-amd/dotfiles.git` (`origin/main`).
 Tracked paths include `~/.claude/`, `~/.config/nvim/`, shell rc files, etc.
 
-A Codex hook plugin at `~/plugins/personal-hooks` runs
+A Codex hook plugin at `~/.agents/plugins/personal-hooks` runs
 `scripts/dotfiles-dirty-check.sh` on every `UserPromptSubmit` event. When the
 repo has tracked changes, the hook injects an additional-context reminder so
 this skill can offer the sync workflow. The hook only inspects local state; it
