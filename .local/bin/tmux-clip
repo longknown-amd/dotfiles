@@ -1,0 +1,12 @@
+#!/bin/sh
+# Pipe stdin to the X CLIPBOARD selection, but ignore selections that are
+# almost certainly accidental drags from a click with mouse jitter.
+# Used by tmux copy-pipe bindings so a stray click in another pane doesn't
+# clobber a real previous copy.
+
+MIN_LEN="${TMUX_CLIP_MIN_LEN:-2}"
+
+data=$(cat)
+[ "${#data}" -ge "$MIN_LEN" ] || exit 0
+
+printf '%s' "$data" | xclip -in -selection clipboard -loops 5

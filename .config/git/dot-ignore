@@ -11,4 +11,7 @@ tmux-client*.log
 .claude/statsig/
 .claude/ide/
 .cache/
-.local/
+.local/*
+!.local/bin/
+.local/bin/*
+!.local/bin/tmux-clip
