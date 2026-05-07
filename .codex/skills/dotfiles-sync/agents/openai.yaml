@@ -1,0 +1,4 @@
+interface:
+  display_name: "Dotfiles Sync"
+  short_description: "Review, commit, and push the ~/.dotfiles bare repo."
+  default_prompt: "Sync my dotfiles and push them to origin/main."

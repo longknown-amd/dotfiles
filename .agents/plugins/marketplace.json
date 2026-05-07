@@ -1,0 +1,20 @@
+{
+  "name": "personal-local",
+  "interface": {
+    "displayName": "Personal Plugins"
+  },
+  "plugins": [
+    {
+      "name": "personal-hooks",
+      "source": {
+        "source": "local",
+        "path": "./plugins/personal-hooks"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}
