@@ -1,0 +1,41 @@
+{
+  "name": "personal-hooks",
+  "version": "0.1.0",
+  "description": "Personal prompt hooks that enforce native phrasing and surface ~/.dotfiles reminders.",
+  "author": {
+    "name": "thohuang",
+    "email": "thohuang@amd.com",
+    "url": "https://github.com/longknown-amd"
+  },
+  "homepage": "",
+  "repository": "",
+  "license": "MIT",
+  "keywords": [
+    "hooks",
+    "dotfiles"
+  ],
+  "skills": null,
+  "hooks": "./hooks.json",
+  "mcpServers": null,
+  "apps": null,
+  "interface": {
+    "displayName": "Personal Hooks",
+    "shortDescription": "Native phrasing primer plus ~/.dotfiles reminder.",
+    "longDescription": "Adds a UserPromptSubmit hook that leads every reply with a native phrasing restatement and checks ~/.dotfiles for tracked dirt so the dotfiles-sync skill can respond quickly.",
+    "developerName": "thohuang",
+    "category": "Productivity",
+    "capabilities": [
+      "Automation"
+    ],
+    "websiteURL": "",
+    "privacyPolicyURL": "",
+    "termsOfServiceURL": "",
+    "defaultPrompt": [
+      "Enable personal-hooks so I get the native phrasing and dotfiles reminder."
+    ],
+    "brandColor": "#0F172A",
+    "composerIcon": "",
+    "logo": "",
+    "screenshots": []
+  }
+}

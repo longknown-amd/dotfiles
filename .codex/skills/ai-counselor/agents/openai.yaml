@@ -1,0 +1,4 @@
+interface:
+  display_name: "AI Counselor"
+  short_description: "Plan how to split engineering work between you and Codex."
+  default_prompt: "Help me decide which parts of this GPU project I should do versus Codex."

@@ -1,0 +1,16 @@
+{
+  "UserPromptSubmit": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "echo '{\"hookSpecificOutput\":{\"hookEventName\":\"UserPromptSubmit\",\"additionalContext\":\"Start your response with **Native phrasing:** followed by a natural, native-English rephrasing of the user prompt on a single line, then answer normally. Skip this for trivial acknowledgments (ok, thanks, yes please) or messages already in clean direct command form.\"}}'"
+        },
+        {
+          "type": "command",
+          "command": "$HOME/plugins/personal-hooks/scripts/dotfiles-dirty-check.sh"
+        }
+      ]
+    }
+  ]
+}

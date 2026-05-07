@@ -1,0 +1,4 @@
+interface:
+  display_name: "Generate Documentation"
+  short_description: "Draft and publish GPU engineering docs from ~/docs."
+  default_prompt: "Write a new microbench troubleshooting guide and push it live."
