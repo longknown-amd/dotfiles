@@ -32,6 +32,17 @@ opt.softtabstop = 4
 opt.wrap = false
 opt.laststatus = 2
 opt.clipboard = "unnamedplus"
+vim.g.clipboard = {
+    name = "OSC 52 (copy-only)",
+    copy = {
+        ["+"] = require("vim.ui.clipboard.osc52").copy("+"),
+        ["*"] = require("vim.ui.clipboard.osc52").copy("*"),
+    },
+    paste = {
+        ["+"] = function() return { vim.fn.split(vim.fn.getreg('"'), "\n"), vim.fn.getregtype('"') } end,
+        ["*"] = function() return { vim.fn.split(vim.fn.getreg('"'), "\n"), vim.fn.getregtype('"') } end,
+    },
+}
 opt.signcolumn = "yes"
 opt.scrolloff = 8
 

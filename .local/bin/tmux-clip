@@ -1,12 +1,32 @@
 #!/bin/sh
-# Pipe stdin to the X CLIPBOARD selection, but ignore selections that are
-# almost certainly accidental drags from a click with mouse jitter.
-# Used by tmux copy-pipe bindings so a stray click in another pane doesn't
-# clobber a real previous copy.
+# Pipe stdin into the system clipboard via tmux's OSC 52 emission
+# (set-clipboard on + load-buffer -w). No X server required, works over
+# plain SSH into any OSC 52-capable outer terminal (WezTerm, Windows
+# Terminal, Tabby, iTerm2, kitty, ...).
+#
+# Skip selections shorter than MIN_LEN to avoid stray-click drags
+# clobbering a previous copy.
+
+# Require tmux >= 3.2: that's when `load-buffer -w` started emitting OSC 52.
+# Older tmux silently drops the -w flag and the selection vanishes; bail
+# loudly so the user fixes their tmux instead of debugging a "clipboard
+# does nothing" mystery. Unparseable versions (dev builds like next-3.5)
+# are trusted.
+tmux_ver=$(tmux -V 2>/dev/null | awk '{print $2}')
+case "$tmux_ver" in
+    [0-9]*.[0-9]*)
+        major=$(printf '%s' "$tmux_ver" | sed 's/\..*//')
+        minor=$(printf '%s' "$tmux_ver" | sed 's/^[0-9]*\.\([0-9]*\).*/\1/')
+        if [ "$major" -lt 3 ] || { [ "$major" -eq 3 ] && [ "$minor" -lt 2 ]; }; then
+            printf 'tmux-clip: requires tmux >= 3.2 for `load-buffer -w` (OSC 52 in tmux); have %s\n' "$tmux_ver" >&2
+            exit 1
+        fi
+        ;;
+esac
 
 MIN_LEN="${TMUX_CLIP_MIN_LEN:-2}"
 
 data=$(cat)
 [ "${#data}" -ge "$MIN_LEN" ] || exit 0
 
-printf '%s' "$data" | xclip -in -selection clipboard -loops 5
+printf '%s' "$data" | tmux load-buffer -w -
