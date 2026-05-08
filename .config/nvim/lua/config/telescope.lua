@@ -1,3 +1,42 @@
+-- Compatibility shims for nvim-treesitter `main` (the API rewrite).
+-- telescope.nvim's previewer still expects the legacy modules:
+--   - parsers.ft_to_lang(ft)               (removed)
+--   - parsers.get_parser(bufnr, lang)      (removed)
+--   - nvim-treesitter.configs              (whole module gone)
+-- Re-implement them on top of core nvim's vim.treesitter.* API.
+do
+    -- Patch nvim-treesitter.parsers (still ships, but slimmer).
+    local ok, parsers = pcall(require, "nvim-treesitter.parsers")
+    if ok and parsers then
+        if not parsers.ft_to_lang then
+            parsers.ft_to_lang = function(ft)
+                return vim.treesitter.language.get_lang(ft) or ft
+            end
+        end
+        if not parsers.get_parser then
+            parsers.get_parser = function(bufnr, lang)
+                local pok, parser = pcall(vim.treesitter.get_parser, bufnr or 0, lang)
+                return pok and parser or nil
+            end
+        end
+    end
+
+    -- Fake nvim-treesitter.configs so Telescope's pcall-require returns a
+    -- usable table. is_enabled tells Telescope whether to attempt TS
+    -- highlighting; we say yes iff the parser for `lang` is installed.
+    if not package.loaded["nvim-treesitter.configs"] then
+        package.loaded["nvim-treesitter.configs"] = {
+            is_enabled = function(_module, lang, _bufnr)
+                if not lang or lang == "" then return false end
+                return pcall(vim.treesitter.language.add, lang)
+            end,
+            get_module = function(_name)
+                return {}
+            end,
+        }
+    end
+end
+
 local telescope = require("telescope")
 
 local function project_root()
