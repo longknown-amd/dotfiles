@@ -1,14 +1,24 @@
 -- Map a GFX codename from .amdgcn_target to an asm-lsp instruction_set string.
--- Source: LLVM GCNProcessors.td (GFX11/GFX12/GFX1250 SpeedModels, gfx950 SIDP model).
+-- Source: LLVM GCNProcessors.td plus the family-level Arch variants exposed
+-- by the longknown-amd/asm-lsp fork (feature/amdgpu-isa-support).
+-- Order matters: most-specific patterns must come before broader prefix matches.
 local function gfx_to_instruction_set(gfx)
-    -- gfx1250, gfx1251 → CDNA4 (must check before the gfx12 prefix)
-    if gfx:match("^gfx125%d") then return "amdgpu-gfx1250" end
-    -- gfx950 → CDNA4/MI350
-    if gfx == "gfx950" then return "amdgpu-gfx950" end
-    -- gfx1200, gfx1201, gfx12-generic → RDNA4
-    if gfx:match("^gfx12") then return "amdgpu-gfx12" end
-    -- gfx1100-1103, gfx1150-1153, gfx11-generic → RDNA3/CDNA2-3
-    if gfx:match("^gfx11") then return "amdgpu-gfx11" end
+    -- ----- CDNA4 family -----
+    if gfx == "gfx1251"           then return "amdgpu-gfx1251" end
+    if gfx:match("^gfx125%d")     then return "amdgpu-gfx1250" end  -- gfx1250 and future 125x
+    if gfx == "gfx950"            then return "amdgpu-gfx950" end
+    -- ----- CDNA3 / CDNA2 / CDNA1 -----
+    if gfx:match("^gfx94%d")      then return "amdgpu-gfx942" end   -- gfx940/941/942 → MI300
+    if gfx == "gfx90a"            then return "amdgpu-gfx90a" end   -- MI200/250
+    if gfx == "gfx908"            then return "amdgpu-gfx908" end   -- MI100
+    -- ----- RDNA4 / RDNA3.5 / RDNA3 -----
+    if gfx:match("^gfx12")        then return "amdgpu-gfx12" end    -- gfx1200/1201/12-generic
+    if gfx:match("^gfx115%d")     then return "amdgpu-gfx11-5" end  -- gfx1150-1153 (Strix)
+    if gfx:match("^gfx11")        then return "amdgpu-gfx11" end    -- gfx1100-1103/11-generic
+    -- ----- RDNA2 / RDNA1 -----
+    if gfx:match("^gfx103%d")     then return "amdgpu-gfx10-3" end  -- gfx1030-1036 (Navi2x)
+    if gfx:match("^gfx101%d")     then return "amdgpu-gfx10" end    -- gfx1010-1013 (Navi1x)
+    if gfx:match("^gfx10")        then return "amdgpu-gfx10" end    -- gfx10-generic fallback
 end
 
 -- Scan the first 50 lines of a buffer for .amdgcn_target and return the GFX
