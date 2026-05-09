@@ -79,13 +79,29 @@ if (( ${#need_pkgs[@]} )); then
     apt_install "${need_pkgs[@]}"
 fi
 
-# 2. Clone the bare repo -----------------------------------------------------
+# 2. Clone or update the bare repo ------------------------------------------
 # Done early (before optional tool installs) so the dotfiles checkout in
 # step 4 can restore configs BEFORE we probe tools like `yazi --version`,
 # which loads the user's config and would otherwise scream against a stale
 # on-disk copy from a prior run.
+#
+# For an existing local repo, fast-forward `main` to origin/main so re-runs
+# pick up new commits pushed from another machine. The `+` refspec prefix
+# force-updates if needed; in normal operation this is a fast-forward and
+# no local commits exist to lose. If the user has unpushed local commits,
+# they should push via the dotfiles-sync workflow first.
 if [[ -d "$DOT_DIR" ]]; then
-    log "$DOT_DIR already exists, skipping clone"
+    log "$DOT_DIR already exists — fetching latest from origin"
+    # Two-step fetch: into refs/remotes/origin/main first, then advance
+    # local main via update-ref. A direct `+main:refs/heads/main` refspec
+    # is blocked by git when --work-tree=$HOME is set (git sees main as
+    # the "currently checked out" branch). update-ref bypasses that guard.
+    if dot fetch origin main:refs/remotes/origin/main 2>/dev/null; then
+        dot update-ref refs/heads/main refs/remotes/origin/main 2>/dev/null \
+            || warn "Could not advance local main to origin/main"
+    else
+        warn "Could not fetch from origin; proceeding with stale local HEAD"
+    fi
 else
     log "Cloning dotfiles into $DOT_DIR"
     if ! git clone --bare "$REPO_URL" "$DOT_DIR" 2>/dev/null; then
