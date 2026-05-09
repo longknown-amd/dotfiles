@@ -189,38 +189,6 @@ else
     log "debugpy already importable in system python3"
 fi
 
-# 1b. Rust toolchain (cargo) — declared, installed lazily ------------------
-# We only install rustup when a later step actually needs cargo (yazi or
-# tree-sitter). On a re-run where both binaries already exist, cargo never
-# gets touched and the cleanup step won't wipe a pre-existing user install.
-# Source the env shim if present so an existing cargo lands on PATH.
-[[ -f "$HOME/.cargo/env" ]] && . "$HOME/.cargo/env"
-RUSTUP_INSTALLED_HERE=false
-install_rustup() {
-    log "Installing Rust toolchain via rustup"
-    apt_install build-essential pkg-config libssl-dev
-    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
-        | sh -s -- -y --default-toolchain stable --no-modify-path
-    # shellcheck disable=SC1091
-    . "$HOME/.cargo/env"
-    RUSTUP_INSTALLED_HERE=true
-}
-ensure_cargo() {
-    if command -v cargo >/dev/null && cargo --version >/dev/null 2>&1; then
-        return 0
-    fi
-    if command -v cargo >/dev/null; then
-        # Proxy present but no usable toolchain (e.g., prior cleanup wiped
-        # ~/.rustup but left the proxies). Try recovery first.
-        warn "cargo proxy present but no toolchain configured — attempting recovery"
-        if command -v rustup >/dev/null && rustup default stable; then
-            log "Recovered: $(cargo --version)"
-            return 0
-        fi
-    fi
-    install_rustup
-}
-
 # 1c. Yazi file manager ------------------------------------------------------
 # Install from the official prebuilt zip (musl-static, ~10 MB) per the upstream
 # install guide: https://yazi-rs.github.io/docs/installation. This avoids the
@@ -264,13 +232,20 @@ fi
 # Required by nvim-treesitter `main` branch (>= 0.26.1) — the rewrite
 # delegates parser compilation to this binary. Without it, parser installs
 # fail silently / with ENOENT 'tree-sitter'.
+# Install from the official prebuilt single-file gzip on GitHub releases.
+# Avoids the cargo + libclang-dev build chain previously required.
 if ! command -v tree-sitter >/dev/null; then
-    ensure_cargo
-    log "Installing tree-sitter-cli via cargo"
-    # tree-sitter-cli depends on rquickjs-sys → bindgen, which needs
-    # libclang.so at build time to generate Rust FFI bindings.
-    apt_install libclang-dev
-    cargo install --locked tree-sitter-cli
+    case "$(uname -m)" in
+        x86_64)  ts_asset="tree-sitter-linux-x64.gz" ;;
+        aarch64) ts_asset="tree-sitter-linux-arm64.gz" ;;
+        *)       die "Unsupported arch for tree-sitter binary release: $(uname -m)" ;;
+    esac
+    log "Installing latest tree-sitter from upstream prebuilt ($ts_asset)"
+    ts_url="https://github.com/tree-sitter/tree-sitter/releases/latest/download/$ts_asset"
+    mkdir -p "$HOME/.local/bin"
+    curl -fsSL "$ts_url" | gunzip > "$HOME/.local/bin/tree-sitter"
+    chmod +x "$HOME/.local/bin/tree-sitter"
+    log "Installed $("$HOME/.local/bin/tree-sitter" --version) → ~/.local/bin/tree-sitter"
 else
     log "tree-sitter already installed: $(tree-sitter --version)"
 fi
@@ -385,31 +360,6 @@ if command -v nvim >/dev/null && [[ -f "$HOME/.config/nvim/init.lua" ]]; then
     log "Syncing nvim plugins headlessly (this can take a minute)"
     nvim --headless "+Lazy! sync" +qa 2>&1 | tail -5 || \
         warn "Lazy sync exited non-zero — open nvim to inspect"
-fi
-
-# 4e. Cleanup build intermediates --------------------------------------------
-# The Rust toolchain was only needed to compile tree-sitter-cli. Once that
-# binary is in ~/.cargo/bin, ~/.rustup (~1.5 GB) and the cargo download
-# caches are dead weight. (Yazi is now installed from a prebuilt zip and
-# never touches cargo.)
-# Only clean up if WE installed rustup this run — never wipe a pre-existing
-# user install. Set KEEP_RUST=1 to force-skip even when we did install it.
-if $RUSTUP_INSTALLED_HERE && [[ "${KEEP_RUST:-0}" != "1" ]]; then
-    log "Cleaning up build intermediates (set KEEP_RUST=1 to skip)"
-    before=$(du -sh "$HOME/.rustup" "$HOME/.cargo" 2>/dev/null | awk '{s+=$1} END {print s}' || echo "?")
-    rm -rf "$HOME/.rustup" \
-           "$HOME/.cargo/registry" \
-           "$HOME/.cargo/git" \
-           /tmp/cargo-install* /tmp/rustup-init* 2>/dev/null || true
-    # Drop rustup proxy binaries (cargo, rustc, ...) — they can't resolve a
-    # toolchain anymore. Keep yazi/ya/tree-sitter (cargo-installed standalone
-    # binaries) and the env shim sourced by .zshenv.
-    for b in cargo cargo-clippy cargo-fmt cargo-miri clippy-driver rls \
-             rust-analyzer rust-gdb rust-gdbgui rust-lldb rustc rustdoc \
-             rustfmt rustup; do
-        rm -f "$HOME/.cargo/bin/$b"
-    done
-    log "Cleanup done"
 fi
 
 # 5. Done --------------------------------------------------------------------
