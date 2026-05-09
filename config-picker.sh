@@ -400,34 +400,43 @@ for name in "${!omz_plugins[@]}"; do
     fi
 done
 
-# 5g. tmux (build from source if too old) -----------------------------------
+# 5g. tmux (install prebuilt AppImage if too old) ---------------------------
 # Distro tmux lags badly: Ubuntu 22.04 ships 3.2a, 24.04 ships 3.4 — both
 # below the 3.5 threshold our .tmux.conf depends on. Upstream doesn't ship
-# prebuilt binaries, so we fetch the official source tarball and build it
-# per-user under ~/.local. The build is small (~30 s with -j$(nproc)) and
-# the resulting binary is self-contained except for runtime libevent /
-# libncurses, which apt installs alongside the *-dev build deps.
+# prebuilt binaries, so use the community AppImage from nelsonenzo. We
+# --appimage-extract it instead of running it directly so libfuse2 isn't
+# required (matters on minimal server installs). Per-user under ~/.local.
+#
+# Alternative if you prefer snap: `sudo snap install tmux --classic` gets
+# tmux 3.6a but requires snapd, which isn't on every server image.
 TMUX_MIN="3.5"
 TMUX_VER="3.5a"
+TMUX_PREFIX="$HOME/.local/share/tmux"
 tmux_cur=""
 if command -v tmux >/dev/null; then
     tmux_cur=$(tmux -V 2>/dev/null | awk '{print $2}')
 fi
 if [[ -z "$tmux_cur" ]] || ! version_ge "$tmux_cur" "$TMUX_MIN"; then
-    log "Building tmux $TMUX_VER from source (current: ${tmux_cur:-none}, need >= $TMUX_MIN)"
-    apt_install libevent-dev libncurses-dev build-essential bison pkg-config
+    log "Installing tmux $TMUX_VER via upstream AppImage (current: ${tmux_cur:-none}, need >= $TMUX_MIN)"
+    tm_url="https://github.com/nelsonenzo/tmux-appimage/releases/download/${TMUX_VER}/tmux.appimage"
     tm_tmp=$(mktemp -d)
-    tm_url="https://github.com/tmux/tmux/releases/download/${TMUX_VER}/tmux-${TMUX_VER}.tar.gz"
-    curl -fsSL "$tm_url" -o "$tm_tmp/tmux.tar.gz"
-    tar -xzf "$tm_tmp/tmux.tar.gz" -C "$tm_tmp"
-    tm_src=$(find "$tm_tmp" -maxdepth 1 -mindepth 1 -type d -name 'tmux-*' | head -1)
-    [[ -d "$tm_src" ]] || die "Could not find extracted tmux source under $tm_tmp"
-    (
-        cd "$tm_src" \
-            && ./configure --prefix="$HOME/.local" >/dev/null \
-            && make -j"$(nproc)" >/dev/null \
-            && make install >/dev/null
-    ) || die "tmux build failed — see stderr above"
+    curl -fsSL "$tm_url" -o "$tm_tmp/tmux.appimage"
+    chmod +x "$tm_tmp/tmux.appimage"
+    # --appimage-extract dumps squashfs-root/ next to the AppImage. This
+    # avoids the FUSE round trip on each invocation and removes libfuse2
+    # as a runtime dep entirely.
+    ( cd "$tm_tmp" && ./tmux.appimage --appimage-extract >/dev/null ) \
+        || die "tmux AppImage extract failed"
+    [[ -d "$tm_tmp/squashfs-root" ]] || die "AppImage extraction produced no squashfs-root"
+    mkdir -p "$TMUX_PREFIX"
+    tm_dest="$TMUX_PREFIX/$TMUX_VER"
+    rm -rf "$tm_dest"
+    mv "$tm_tmp/squashfs-root" "$tm_dest"
+    ln -sfn "$tm_dest" "$TMUX_PREFIX/current"
+    # AppRun is the entry shim that sets PATH/LD paths before exec'ing the
+    # inner tmux binary. readlink -f inside it resolves through the
+    # symlink, so libs are still located correctly when invoked as tmux.
+    ln -sfn "$TMUX_PREFIX/current/AppRun" "$HOME/.local/bin/tmux"
     rm -rf "$tm_tmp"
     hash -r  # let the shell rediscover tmux on PATH
     log "Installed $("$HOME/.local/bin/tmux" -V) → ~/.local/bin/tmux"
