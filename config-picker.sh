@@ -225,16 +225,33 @@ if ! command -v yazi >/dev/null; then
     rm -rf "$yz_tmp"
     log "Installed $("$HOME/.local/bin/yazi" --version | head -1) → ~/.local/bin/yazi"
 else
-    log "yazi already installed: $(yazi --version | head -1)"
+    # </dev/null + stderr-redirect: yazi --version still parses the user's
+    # config, and a stale ~/.config/yazi/*.toml on disk (e.g. from a prior
+    # install run before the current dotfiles checkout) can both error AND
+    # block on a "Press <Enter> to continue" prompt. Suppress both.
+    log "yazi already installed: $(yazi --version </dev/null 2>/dev/null | head -1)"
 fi
 
 # 1c2. tree-sitter CLI -------------------------------------------------------
 # Required by nvim-treesitter `main` branch (>= 0.26.1) — the rewrite
 # delegates parser compilation to this binary. Without it, parser installs
 # fail silently / with ENOENT 'tree-sitter'.
-# Install from the official prebuilt single-file gzip on GitHub releases.
-# Avoids the cargo + libclang-dev build chain previously required.
-if ! command -v tree-sitter >/dev/null; then
+#
+# Strategy: try the official prebuilt binary first (single .gz, no deps).
+# If it fails to execute (typically `GLIBC_2.39 not found` on Ubuntu 22.04
+# — upstream builds against the latest GH-Actions Ubuntu image), fall back
+# to building from source via cargo. Cargo is installed lazily and the
+# rustup install is wiped after the build to keep disk usage down.
+ts_bin="$HOME/.local/bin/tree-sitter"
+ts_works() { "$1" --version >/dev/null 2>&1; }
+
+if command -v tree-sitter >/dev/null && ts_works "$(command -v tree-sitter)"; then
+    log "tree-sitter already installed: $(tree-sitter --version)"
+else
+    # Drop any pre-existing broken binary so the path lookup re-resolves
+    # cleanly after we install/build.
+    [[ -f "$ts_bin" ]] && ! ts_works "$ts_bin" && rm -f "$ts_bin"
+
     case "$(uname -m)" in
         x86_64)  ts_asset="tree-sitter-linux-x64.gz" ;;
         aarch64) ts_asset="tree-sitter-linux-arm64.gz" ;;
@@ -243,11 +260,52 @@ if ! command -v tree-sitter >/dev/null; then
     log "Installing latest tree-sitter from upstream prebuilt ($ts_asset)"
     ts_url="https://github.com/tree-sitter/tree-sitter/releases/latest/download/$ts_asset"
     mkdir -p "$HOME/.local/bin"
-    curl -fsSL "$ts_url" | gunzip > "$HOME/.local/bin/tree-sitter"
-    chmod +x "$HOME/.local/bin/tree-sitter"
-    log "Installed $("$HOME/.local/bin/tree-sitter" --version) → ~/.local/bin/tree-sitter"
-else
-    log "tree-sitter already installed: $(tree-sitter --version)"
+    curl -fsSL "$ts_url" | gunzip > "$ts_bin"
+    chmod +x "$ts_bin"
+
+    if ts_works "$ts_bin"; then
+        log "Installed $("$ts_bin" --version) → ~/.local/bin/tree-sitter"
+    else
+        warn "Prebuilt tree-sitter doesn't run on this host (likely glibc too old)"
+        warn "Falling back to building tree-sitter-cli from source via cargo"
+        rm -f "$ts_bin"
+
+        # Install rustup (transient — cleaned up after the build).
+        [[ -f "$HOME/.cargo/env" ]] && . "$HOME/.cargo/env"
+        TS_INSTALLED_RUSTUP_HERE=false
+        if ! command -v cargo >/dev/null || ! cargo --version >/dev/null 2>&1; then
+            log "Installing Rust toolchain (transient — for tree-sitter-cli build only)"
+            apt_install build-essential pkg-config libssl-dev
+            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
+                | sh -s -- -y --default-toolchain stable --no-modify-path
+            # shellcheck disable=SC1091
+            . "$HOME/.cargo/env"
+            TS_INSTALLED_RUSTUP_HERE=true
+        fi
+        # tree-sitter-cli depends on rquickjs-sys → bindgen, which needs
+        # libclang.so at build time to generate Rust FFI bindings.
+        apt_install libclang-dev
+        cargo install --locked tree-sitter-cli
+        ts_works "$HOME/.cargo/bin/tree-sitter" \
+            && ln -sfn "$HOME/.cargo/bin/tree-sitter" "$ts_bin"
+        log "Built and installed: $($ts_bin --version)"
+
+        # Wipe the transient rustup install (~1.5 GB) — only if WE put it
+        # there. Set KEEP_RUST=1 to skip cleanup. The compiled tree-sitter
+        # binary in ~/.cargo/bin is preserved.
+        if $TS_INSTALLED_RUSTUP_HERE && [[ "${KEEP_RUST:-0}" != "1" ]]; then
+            log "Cleaning up transient Rust toolchain (set KEEP_RUST=1 to skip)"
+            rm -rf "$HOME/.rustup" \
+                   "$HOME/.cargo/registry" \
+                   "$HOME/.cargo/git" \
+                   /tmp/cargo-install* /tmp/rustup-init* 2>/dev/null || true
+            for b in cargo cargo-clippy cargo-fmt cargo-miri clippy-driver rls \
+                     rust-analyzer rust-gdb rust-gdbgui rust-lldb rustc rustdoc \
+                     rustfmt rustup; do
+                rm -f "$HOME/.cargo/bin/$b"
+            done
+        fi
+    fi
 fi
 
 # 1d. oh-my-zsh + custom plugins ---------------------------------------------
@@ -324,15 +382,22 @@ fi
 log "Installing tmux plugins headlessly"
 # TPM's install_plugins reads TMUX_PLUGIN_MANAGER_PATH via
 # `tmux show-environment -g` — it does NOT consult the shell env. So we need
-# a running tmux server that has the variable set globally:
-#   - `tmux start-server` is a no-op if one's already running (e.g. an old
-#     session from a pre-bootstrap tmux config) and starts a fresh server
-#     otherwise. No new sessions are created.
-#   - `tmux set-environment -g` injects the variable globally without
-#     touching any existing sessions' environments.
-tmux start-server
+# a running tmux server that has the variable set globally.
+#
+# Subtlety: `tmux start-server` alone isn't enough. tmux defaults to
+# `exit-empty on`, which kills the server the moment it has zero sessions —
+# so by the time install_plugins runs `show-environment`, the server is
+# already gone and TPM dies with "no server running on /tmp/tmux-…/default".
+# Open a detached dummy session to keep the server alive, then kill it
+# after TPM finishes.
+TPM_BOOT_SESSION="__dotfiles_bootstrap"
+tmux new-session -d -s "$TPM_BOOT_SESSION" 2>/dev/null \
+    || tmux has-session -t "$TPM_BOOT_SESSION" 2>/dev/null \
+    || die "Could not start a tmux session for TPM bootstrap"
 tmux set-environment -g TMUX_PLUGIN_MANAGER_PATH "$HOME/.tmux/plugins/"
-"$TPM_DIR/bin/install_plugins" >/dev/null
+"$TPM_DIR/bin/install_plugins" >/dev/null || \
+    warn "TPM install_plugins exited non-zero — run prefix+I inside tmux to retry"
+tmux kill-session -t "$TPM_BOOT_SESSION" 2>/dev/null || true
 
 # 4c. Yazi plugins -----------------------------------------------------------
 # Tracked package.toml lists code/mime-ext/rich-preview; fetch them now.
