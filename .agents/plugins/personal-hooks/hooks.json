@@ -4,7 +4,7 @@
       "hooks": [
         {
           "type": "command",
-          "command": "echo '{\"hookSpecificOutput\":{\"hookEventName\":\"UserPromptSubmit\",\"additionalContext\":\"Start your response with **Native phrasing:** followed by a natural, native-English rephrasing of the user prompt on a single line, then answer normally. Skip this for trivial acknowledgments (ok, thanks, yes please) or messages already in clean direct command form.\"}}'"
+          "command": "echo '{\"hookSpecificOutput\":{\"hookEventName\":\"UserPromptSubmit\",\"additionalContext\":\"Start your response with **Native phrasing:** followed by a native-English rephrasing of the user prompt on a single line. Keep the meaning identical to the user's wording -- do not reinterpret, expand, or add guidance beyond their request. Skip this for trivial acknowledgments (ok, thanks, yes please) or messages already in clean direct command form.\"}}'"
         },
         {
           "type": "command",
