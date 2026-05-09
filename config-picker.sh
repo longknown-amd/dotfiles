@@ -67,6 +67,7 @@ command -v xclip >/dev/null  || need_pkgs+=(xclip)
 command -v xsel >/dev/null   || need_pkgs+=(xsel)
 command -v axel >/dev/null   || need_pkgs+=(axel)
 command -v fzf >/dev/null    || need_pkgs+=(fzf)
+command -v unzip >/dev/null  || need_pkgs+=(unzip)
 command -v lldb-dap >/dev/null || need_pkgs+=(lldb)
 # (neovim is handled separately below — apt's version is too old.)
 if (( ${#need_pkgs[@]} )); then
@@ -221,21 +222,40 @@ ensure_cargo() {
 }
 
 # 1c. Yazi file manager ------------------------------------------------------
-# Installed via cargo so we get a recent build matching the tracked
-# ~/.config/yazi/ plugins.
+# Install from the official prebuilt zip (musl-static, ~10 MB) per the upstream
+# install guide: https://yazi-rs.github.io/docs/installation. This avoids the
+# Rust toolchain compile cycle (~1.5 GB and several minutes) that the previous
+# `cargo install yazi-build` path required. Per-user under ~/.local — no sudo.
+YAZI_PREFIX="$HOME/.local/share/yazi"
 if ! command -v yazi >/dev/null; then
-    ensure_cargo
-    log "Installing yazi (via yazi-build meta-crate) via cargo"
+    case "$(uname -m)" in
+        x86_64)  yz_asset="yazi-x86_64-unknown-linux-musl.zip" ;;
+        aarch64) yz_asset="yazi-aarch64-unknown-linux-musl.zip" ;;
+        *)       die "Unsupported arch for yazi binary release: $(uname -m)" ;;
+    esac
     # ffmpeg/7zip/jq/poppler/fd/ripgrep/zoxide/imagemagick are yazi's
-    # recommended runtime deps for previews and integrations. (fzf is in the
-    # top-level prereq block since .zshrc also depends on it.)
+    # recommended runtime deps for previews and integrations. (fzf and unzip
+    # are in the top-level prereq block.)
     apt_install \
         ffmpeg p7zip-full jq poppler-utils fd-find ripgrep zoxide imagemagick
-    # As of yazi v25+, `yazi-fm`/`yazi-cli` panic in their build scripts and
-    # demand the `yazi-build` meta-crate (resolves both with consistent
-    # features). Don't pass --locked: yazi-build's Cargo.lock pins a yanked
-    # core2 0.4.0, so let cargo resolve a current version.
-    cargo install --force yazi-build
+    log "Installing latest yazi from upstream prebuilt ($yz_asset)"
+    yz_url="https://github.com/sxyazi/yazi/releases/latest/download/$yz_asset"
+    yz_tmp=$(mktemp -d)
+    curl -fsSL "$yz_url" -o "$yz_tmp/yazi.zip"
+    unzip -q "$yz_tmp/yazi.zip" -d "$yz_tmp"
+    yz_extracted=$(find "$yz_tmp" -maxdepth 1 -mindepth 1 -type d -name 'yazi-*' | head -1)
+    [[ -d "$yz_extracted" ]] || die "Could not find extracted yazi dir under $yz_tmp"
+    mkdir -p "$YAZI_PREFIX"
+    yz_dest="$YAZI_PREFIX/$(basename "$yz_extracted")"
+    rm -rf "$yz_dest"
+    mv "$yz_extracted" "$yz_dest"
+    ln -sfn "$yz_dest" "$YAZI_PREFIX/current"
+    for b in yazi ya; do
+        [[ -e "$YAZI_PREFIX/current/$b" ]] && \
+            ln -sfn "$YAZI_PREFIX/current/$b" "$HOME/.local/bin/$b"
+    done
+    rm -rf "$yz_tmp"
+    log "Installed $("$HOME/.local/bin/yazi" --version | head -1) → ~/.local/bin/yazi"
 else
     log "yazi already installed: $(yazi --version | head -1)"
 fi
@@ -368,9 +388,10 @@ if command -v nvim >/dev/null && [[ -f "$HOME/.config/nvim/init.lua" ]]; then
 fi
 
 # 4e. Cleanup build intermediates --------------------------------------------
-# The Rust toolchain was only needed to compile yazi-build / tree-sitter-cli.
-# Once those binaries are in ~/.cargo/bin, ~/.rustup (~1.5 GB) and the cargo
-# download caches are dead weight.
+# The Rust toolchain was only needed to compile tree-sitter-cli. Once that
+# binary is in ~/.cargo/bin, ~/.rustup (~1.5 GB) and the cargo download
+# caches are dead weight. (Yazi is now installed from a prebuilt zip and
+# never touches cargo.)
 # Only clean up if WE installed rustup this run — never wipe a pre-existing
 # user install. Set KEEP_RUST=1 to force-skip even when we did install it.
 if $RUSTUP_INSTALLED_HERE && [[ "${KEEP_RUST:-0}" != "1" ]]; then
