@@ -62,7 +62,8 @@ need_pkgs=()
 command -v git >/dev/null    || need_pkgs+=(git)
 command -v zsh >/dev/null    || need_pkgs+=(zsh)
 command -v curl >/dev/null   || need_pkgs+=(curl)
-command -v tmux >/dev/null   || need_pkgs+=(tmux)
+# tmux is handled separately in section 5g (apt's tmux is too old for our
+# config — Ubuntu 22.04 ships 3.2a, 24.04 ships 3.4; we need >= 3.5).
 command -v xclip >/dev/null  || need_pkgs+=(xclip)
 command -v xsel >/dev/null   || need_pkgs+=(xsel)
 command -v axel >/dev/null   || need_pkgs+=(axel)
@@ -398,6 +399,41 @@ for name in "${!omz_plugins[@]}"; do
         git clone --depth 1 "${omz_plugins[$name]}" "$dest"
     fi
 done
+
+# 5g. tmux (build from source if too old) -----------------------------------
+# Distro tmux lags badly: Ubuntu 22.04 ships 3.2a, 24.04 ships 3.4 — both
+# below the 3.5 threshold our .tmux.conf depends on. Upstream doesn't ship
+# prebuilt binaries, so we fetch the official source tarball and build it
+# per-user under ~/.local. The build is small (~30 s with -j$(nproc)) and
+# the resulting binary is self-contained except for runtime libevent /
+# libncurses, which apt installs alongside the *-dev build deps.
+TMUX_MIN="3.5"
+TMUX_VER="3.5a"
+tmux_cur=""
+if command -v tmux >/dev/null; then
+    tmux_cur=$(tmux -V 2>/dev/null | awk '{print $2}')
+fi
+if [[ -z "$tmux_cur" ]] || ! version_ge "$tmux_cur" "$TMUX_MIN"; then
+    log "Building tmux $TMUX_VER from source (current: ${tmux_cur:-none}, need >= $TMUX_MIN)"
+    apt_install libevent-dev libncurses-dev build-essential bison pkg-config
+    tm_tmp=$(mktemp -d)
+    tm_url="https://github.com/tmux/tmux/releases/download/${TMUX_VER}/tmux-${TMUX_VER}.tar.gz"
+    curl -fsSL "$tm_url" -o "$tm_tmp/tmux.tar.gz"
+    tar -xzf "$tm_tmp/tmux.tar.gz" -C "$tm_tmp"
+    tm_src=$(find "$tm_tmp" -maxdepth 1 -mindepth 1 -type d -name 'tmux-*' | head -1)
+    [[ -d "$tm_src" ]] || die "Could not find extracted tmux source under $tm_tmp"
+    (
+        cd "$tm_src" \
+            && ./configure --prefix="$HOME/.local" >/dev/null \
+            && make -j"$(nproc)" >/dev/null \
+            && make install >/dev/null
+    ) || die "tmux build failed — see stderr above"
+    rm -rf "$tm_tmp"
+    hash -r  # let the shell rediscover tmux on PATH
+    log "Installed $("$HOME/.local/bin/tmux" -V) → ~/.local/bin/tmux"
+else
+    log "tmux $tmux_cur is recent enough (>= $TMUX_MIN)"
+fi
 
 # 6a. tmux plugins (TPM) -----------------------------------------------------
 TPM_DIR="$HOME/.tmux/plugins/tpm"
