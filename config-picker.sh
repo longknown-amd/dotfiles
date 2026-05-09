@@ -79,7 +79,49 @@ if (( ${#need_pkgs[@]} )); then
     apt_install "${need_pkgs[@]}"
 fi
 
-# 1a. Neovim (from upstream release if missing or too old) ------------------
+# 2. Clone the bare repo -----------------------------------------------------
+# Done early (before optional tool installs) so the dotfiles checkout in
+# step 4 can restore configs BEFORE we probe tools like `yazi --version`,
+# which loads the user's config and would otherwise scream against a stale
+# on-disk copy from a prior run.
+if [[ -d "$DOT_DIR" ]]; then
+    log "$DOT_DIR already exists, skipping clone"
+else
+    log "Cloning dotfiles into $DOT_DIR"
+    if ! git clone --bare "$REPO_URL" "$DOT_DIR" 2>/dev/null; then
+        warn "SSH clone failed, falling back to HTTPS (read-only)"
+        git clone --bare "$REPO_URL_HTTPS" "$DOT_DIR"
+    fi
+fi
+
+# 3. Local repo config -------------------------------------------------------
+log "Configuring repo (hide untracked, set ignore file)"
+dot config --local status.showUntrackedFiles no
+dot config --local core.excludesFile "$HOME/.config/git/dot-ignore"
+
+# 4. Restore tracked files into $HOME ---------------------------------------
+# Use `checkout HEAD -- :/` (unambiguous pathspec from work-tree root) to
+# actually populate / restore tracked files. Plain `dot checkout` with no
+# pathspec only prints status — it does NOT restore deleted files.
+# Force-overwrites local modifications to tracked files; back them up first
+# so the user doesn't silently lose anything.
+log "Checking for locally modified tracked files"
+modified=$(dot diff --name-only HEAD 2>/dev/null || true)
+if [[ -n "$modified" ]]; then
+    warn "Local modifications detected — backing up to $BACKUP_DIR"
+    mkdir -p "$BACKUP_DIR"
+    while IFS= read -r f; do
+        [[ -e "$HOME/$f" ]] || continue
+        dest="$BACKUP_DIR/$f"
+        mkdir -p "$(dirname "$dest")"
+        cp -a "$HOME/$f" "$dest"
+    done <<< "$modified"
+    log "Backed-up originals are in $BACKUP_DIR"
+fi
+log "Restoring tracked files from HEAD into \$HOME"
+dot checkout HEAD -- :/
+
+# 5a. Neovim (from upstream release if missing or too old) ------------------
 # Distro-packaged nvim lags badly: Ubuntu 22.04 ships 0.6, 24.04 ships 0.9,
 # but our nvim config (treesitter `main` branch, etc.) needs >= 0.11. So we
 # pull the official tarball from GitHub releases and install per-user under
@@ -119,7 +161,7 @@ else
     log "neovim $nvim_cur is recent enough (>= $NVIM_MIN)"
 fi
 
-# 1a2. Node.js / npm (for mason to install pyright et al.) -----------------
+# 5b. Node.js / npm (for mason to install pyright et al.) ------------------
 # Mason installs npm-based LSPs (pyright, bash-language-server) via npm.
 # Distro nodejs lags badly (Ubuntu 22.04 ships v12, too old for current
 # pyright). Pull the official Linux tarball from nodejs.org per-user.
@@ -161,7 +203,7 @@ else
     log "node $node_cur is recent enough (>= $NODE_MIN)"
 fi
 
-# 1a3. Python CLI tools ------------------------------------------------------
+# 5c. Python CLI tools -------------------------------------------------------
 # rich-cli: invoked by yazi's rich-preview plugin (markdown/json/csv/etc).
 # debugpy:  imported by nvim DAP-Python (`python -m debugpy.adapter`).
 # rich-cli is a CLI app — install via pipx (isolated venv on $PATH).
@@ -189,12 +231,25 @@ else
     log "debugpy already importable in system python3"
 fi
 
-# 1c. Yazi file manager ------------------------------------------------------
+# 5d. Yazi file manager ------------------------------------------------------
 # Install from the official prebuilt zip (musl-static, ~10 MB) per the upstream
 # install guide: https://yazi-rs.github.io/docs/installation. This avoids the
 # Rust toolchain compile cycle (~1.5 GB and several minutes) that the previous
 # `cargo install yazi-build` path required. Per-user under ~/.local — no sudo.
 YAZI_PREFIX="$HOME/.local/share/yazi"
+
+# yazi_version <binary> — print yazi's version line in a way that won't
+# leak parse-error noise or block on the "Press <Enter>" prompt yazi shows
+# when its config can't be parsed. Two layers of defense:
+#   1. setsid -w runs the probe in a new session WITHOUT a controlling
+#      terminal, so yazi's open("/dev/tty") fails — yazi can't render
+#      the interactive prompt or its associated error text.
+#   2. </dev/null + 2>/dev/null catches anything that does try stdin/stderr.
+# Stdout is preserved so command substitution can still capture the version.
+yazi_version() {
+    setsid -w "$1" --version </dev/null 2>/dev/null | head -1
+}
+
 if ! command -v yazi >/dev/null; then
     case "$(uname -m)" in
         x86_64)  yz_asset="yazi-x86_64-unknown-linux-musl.zip" ;;
@@ -223,16 +278,12 @@ if ! command -v yazi >/dev/null; then
             ln -sfn "$YAZI_PREFIX/current/$b" "$HOME/.local/bin/$b"
     done
     rm -rf "$yz_tmp"
-    log "Installed $("$HOME/.local/bin/yazi" --version | head -1) → ~/.local/bin/yazi"
+    log "Installed $(yazi_version "$HOME/.local/bin/yazi") → ~/.local/bin/yazi"
 else
-    # </dev/null + stderr-redirect: yazi --version still parses the user's
-    # config, and a stale ~/.config/yazi/*.toml on disk (e.g. from a prior
-    # install run before the current dotfiles checkout) can both error AND
-    # block on a "Press <Enter> to continue" prompt. Suppress both.
-    log "yazi already installed: $(yazi --version </dev/null 2>/dev/null | head -1)"
+    log "yazi already installed: $(yazi_version yazi)"
 fi
 
-# 1c2. tree-sitter CLI -------------------------------------------------------
+# 5e. tree-sitter CLI --------------------------------------------------------
 # Required by nvim-treesitter `main` branch (>= 0.26.1) — the rewrite
 # delegates parser compilation to this binary. Without it, parser installs
 # fail silently / with ENOENT 'tree-sitter'.
@@ -308,7 +359,7 @@ else
     fi
 fi
 
-# 1d. oh-my-zsh + custom plugins ---------------------------------------------
+# 5f. oh-my-zsh + custom plugins ---------------------------------------------
 # .zshrc sources $ZSH/oh-my-zsh.sh and references three non-bundled plugins.
 export ZSH="${ZSH:-$HOME/.oh-my-zsh}"
 if [[ ! -d "$ZSH" ]]; then
@@ -332,45 +383,7 @@ for name in "${!omz_plugins[@]}"; do
     fi
 done
 
-# 2. Clone the bare repo -----------------------------------------------------
-if [[ -d "$DOT_DIR" ]]; then
-    log "$DOT_DIR already exists, skipping clone"
-else
-    log "Cloning dotfiles into $DOT_DIR"
-    if ! git clone --bare "$REPO_URL" "$DOT_DIR" 2>/dev/null; then
-        warn "SSH clone failed, falling back to HTTPS (read-only)"
-        git clone --bare "$REPO_URL_HTTPS" "$DOT_DIR"
-    fi
-fi
-
-# 3. Local repo config -------------------------------------------------------
-log "Configuring repo (hide untracked, set ignore file)"
-dot config --local status.showUntrackedFiles no
-dot config --local core.excludesFile "$HOME/.config/git/dot-ignore"
-
-# 4. Restore tracked files into $HOME ---------------------------------------
-# Use `checkout HEAD -- :/` (unambiguous pathspec from work-tree root) to
-# actually populate / restore tracked files. Plain `dot checkout` with no
-# pathspec only prints status — it does NOT restore deleted files.
-# Force-overwrites local modifications to tracked files; back them up first
-# so the user doesn't silently lose anything.
-log "Checking for locally modified tracked files"
-modified=$(dot diff --name-only HEAD 2>/dev/null || true)
-if [[ -n "$modified" ]]; then
-    warn "Local modifications detected — backing up to $BACKUP_DIR"
-    mkdir -p "$BACKUP_DIR"
-    while IFS= read -r f; do
-        [[ -e "$HOME/$f" ]] || continue
-        dest="$BACKUP_DIR/$f"
-        mkdir -p "$(dirname "$dest")"
-        cp -a "$HOME/$f" "$dest"
-    done <<< "$modified"
-    log "Backed-up originals are in $BACKUP_DIR"
-fi
-log "Restoring tracked files from HEAD into \$HOME"
-dot checkout HEAD -- :/
-
-# 4b. tmux plugins (TPM) -----------------------------------------------------
+# 6a. tmux plugins (TPM) -----------------------------------------------------
 TPM_DIR="$HOME/.tmux/plugins/tpm"
 if [[ ! -d "$TPM_DIR" ]]; then
     log "Installing TPM (tmux plugin manager)"
@@ -399,7 +412,7 @@ tmux set-environment -g TMUX_PLUGIN_MANAGER_PATH "$HOME/.tmux/plugins/"
     warn "TPM install_plugins exited non-zero — run prefix+I inside tmux to retry"
 tmux kill-session -t "$TPM_BOOT_SESSION" 2>/dev/null || true
 
-# 4c. Yazi plugins -----------------------------------------------------------
+# 6b. Yazi plugins -----------------------------------------------------------
 # Tracked package.toml lists code/mime-ext/rich-preview; fetch them now.
 # yazi v25+ renamed `ya pack` to `ya pkg`; install-all is now `ya pkg install`.
 if command -v ya >/dev/null && [[ -f "$HOME/.config/yazi/package.toml" ]]; then
@@ -407,7 +420,7 @@ if command -v ya >/dev/null && [[ -f "$HOME/.config/yazi/package.toml" ]]; then
     ya pkg install || warn "ya pkg install had issues — check ~/.config/yazi/package.toml"
 fi
 
-# 4d. Neovim plugins (lazy.nvim) ---------------------------------------------
+# 6c. Neovim plugins (lazy.nvim) ---------------------------------------------
 # Pre-clone lazy.nvim from the shell rather than relying on lua/config/lazy.lua's
 # self-bootstrap: that bootstrap calls getchar() on failure, which hangs in
 # `--headless` mode if the clone fails. With lazy.nvim already on disk, the
@@ -427,7 +440,7 @@ if command -v nvim >/dev/null && [[ -f "$HOME/.config/nvim/init.lua" ]]; then
         warn "Lazy sync exited non-zero — open nvim to inspect"
 fi
 
-# 5. Done --------------------------------------------------------------------
+# 7. Done --------------------------------------------------------------------
 log "Done. Next steps:"
 cat <<'EOF'
 
