@@ -38,7 +38,6 @@ marker_selected = { fg = "lightyellow", bg = "lightyellow" }
 # Tab
 tab_active   = { reversed = true }
 tab_inactive = {}
-tab_width    = 1
 
 # Count
 count_copied   = { fg = "white", bg = "green" }
