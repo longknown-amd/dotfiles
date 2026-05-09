@@ -123,7 +123,18 @@ function M.setup()
                 vim.fn.writefile(lines, toml_path)
             end
 
-            vim.cmd("LspRestart asm_lsp")
+            if vim.fn.exists(":lsp") == 2 then
+                -- Neovim 0.12+ built-in
+                vim.cmd("lsp restart asm_lsp")
+            elseif vim.fn.exists(":LspRestart") == 2 then
+                -- nvim-lspconfig on Neovim <= 0.11
+                vim.cmd("LspRestart asm_lsp")
+            else
+                for _, c in ipairs(vim.lsp.get_clients({ name = "asm_lsp" })) do
+                    vim.lsp.stop_client(c.id)
+                end
+                vim.defer_fn(function() vim.cmd("edit") end, 150)
+            end
             vim.notify("asm-lsp: switched to " .. isa, vim.log.levels.INFO)
         end)
     end, {})
