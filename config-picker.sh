@@ -15,8 +15,22 @@ set -euo pipefail
 #       On Ubuntu 22.04+ needrestart fires after every apt install and pops
 #       a whiptail dialog about pending kernel upgrades / services to restart.
 #       That dialog blocks `curl … | bash` invocations indefinitely.
+#   NEEDRESTART_MODE=a              — belt-and-suspenders: if SUSPEND is
+#       ignored (some sudoers/needrestart configs), force fully-automatic
+#       mode so no dialog renders even when needrestart does run.
 export DEBIAN_FRONTEND=noninteractive
 export NEEDRESTART_SUSPEND=1
+export NEEDRESTART_MODE=a
+
+# sudo defaults to env_reset, which drops the variables above. Wrap apt-get
+# so we explicitly propagate them across the sudo boundary on every call.
+apt_install() {
+    sudo \
+        DEBIAN_FRONTEND=noninteractive \
+        NEEDRESTART_SUSPEND=1 \
+        NEEDRESTART_MODE=a \
+        apt-get install -y "$@"
+}
 
 REPO_URL="git@github.com:longknown-amd/dotfiles.git"
 REPO_URL_HTTPS="https://github.com/longknown-amd/dotfiles.git"
@@ -61,7 +75,7 @@ if (( ${#need_pkgs[@]} )); then
     # system-wide apt cache could surface unrelated upgrades on the host.
     # If installs fail because the cache is stale, run `sudo apt-get update`
     # manually and re-run this script.
-    sudo apt-get install -y "${need_pkgs[@]}"
+    apt_install "${need_pkgs[@]}"
 fi
 
 # 1a. Neovim (from upstream release if missing or too old) ------------------
@@ -121,7 +135,7 @@ if [[ -z "$node_cur" ]] || ! version_ge "$node_cur" "$NODE_MIN"; then
         *)       die "Unsupported arch for Node.js binary: $(uname -m)" ;;
     esac
     # `xz` is needed to extract Node's .tar.xz; install if missing.
-    command -v xz >/dev/null || sudo apt-get install -y xz-utils
+    command -v xz >/dev/null || apt_install xz-utils
     log "Resolving latest Node.js LTS from nodejs.org"
     nd_lts=$(curl -fsSL https://nodejs.org/dist/index.json \
         | python3 -c "import json,sys; print(next(x for x in json.load(sys.stdin) if x['lts'])['version'])")
@@ -156,7 +170,7 @@ fi
 # `pip install --user` with PEP 668 escape hatch on bare Ubuntu 24.04+.
 if ! command -v pipx >/dev/null; then
     log "Installing pipx (for rich-cli)"
-    sudo apt-get install -y pipx
+    apt_install pipx
     pipx ensurepath >/dev/null 2>&1 || true
 fi
 if ! pipx list 2>/dev/null | grep -qE '^[[:space:]]*package rich-cli '; then
@@ -167,7 +181,7 @@ else
 fi
 if ! python3 -c 'import debugpy' 2>/dev/null; then
     log "Installing debugpy (python3-debugpy via apt, pip --user fallback)"
-    sudo apt-get install -y python3-debugpy 2>/dev/null \
+    apt_install python3-debugpy 2>/dev/null \
         || python3 -m pip install --user --break-system-packages debugpy \
         || python3 -m pip install --user debugpy
 else
@@ -183,7 +197,7 @@ fi
 RUSTUP_INSTALLED_HERE=false
 install_rustup() {
     log "Installing Rust toolchain via rustup"
-    sudo apt-get install -y build-essential pkg-config libssl-dev
+    apt_install build-essential pkg-config libssl-dev
     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
         | sh -s -- -y --default-toolchain stable --no-modify-path
     # shellcheck disable=SC1091
@@ -215,7 +229,7 @@ if ! command -v yazi >/dev/null; then
     # ffmpeg/7zip/jq/poppler/fd/ripgrep/zoxide/imagemagick are yazi's
     # recommended runtime deps for previews and integrations. (fzf is in the
     # top-level prereq block since .zshrc also depends on it.)
-    sudo apt-get install -y \
+    apt_install \
         ffmpeg p7zip-full jq poppler-utils fd-find ripgrep zoxide imagemagick
     # As of yazi v25+, `yazi-fm`/`yazi-cli` panic in their build scripts and
     # demand the `yazi-build` meta-crate (resolves both with consistent
@@ -235,7 +249,7 @@ if ! command -v tree-sitter >/dev/null; then
     log "Installing tree-sitter-cli via cargo"
     # tree-sitter-cli depends on rquickjs-sys → bindgen, which needs
     # libclang.so at build time to generate Rust FFI bindings.
-    sudo apt-get install -y libclang-dev
+    apt_install libclang-dev
     cargo install --locked tree-sitter-cli
 else
     log "tree-sitter already installed: $(tree-sitter --version)"
