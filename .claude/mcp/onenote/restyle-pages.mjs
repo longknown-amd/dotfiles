@@ -4,12 +4,15 @@
 
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import { PublicClientApplication } from '@azure/msal-node';
 import { Client } from '@microsoft/microsoft-graph-client';
 import { marked } from 'marked';
 import fetch from 'node-fetch';
 
-const MCP_DIR = '/home/thohuang/onenotemcp';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const MCP_DIR = __dirname;
 const DOCS_DIR = '/home/thohuang/docs/docs';
 const MKDOCS_BASE = 'http://hjbog-srdc-38:8000';
 
