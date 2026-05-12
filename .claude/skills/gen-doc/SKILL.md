@@ -3,114 +3,114 @@ name: gen-doc
 description: Use this skill when the user asks to generate, output, create, or write documentation, study notes, a guide, or a reference doc. Trigger automatically unless the user explicitly says to write elsewhere (e.g., "save it here", "put it in this repo", "output to stdout").
 ---
 
-# Generate Documentation
+# Generate Documentation → OneNote
 
-All GPU engineering docs live in a self-hosted git repo on `hjbog-srdc-38`. The architecture is:
+All documentation is published to **OneNote** in the **AMD-Work** notebook, section **GPU-Eng-Notes**. Pages are organized with category header pages (level 0) and content pages indented as subpages (level 1).
 
-- **Bare repo (push target):** `hjbog-srdc-38:~/docs.git`
-- **Working tree (built from):** `~/docs` on the server, with mkdocs and a `.venv/`
-- **Build output:** `~/docs/site/` — pre-rendered static HTML, populated by the post-receive hook
-- **Web server:** user-systemd unit `docs-http.service` running `python3 -m http.server 8000 --directory ~/docs/site`, served at **http://hjbog-srdc-38:8000/**
+## 1. Determine the topic and category
 
-Push to `~/docs.git` → server hook does `git pull --ff-only` in `~/docs`, then `mkdocs build` → `python3 -m http.server` serves the freshly-rebuilt static site immediately. End-to-end propagation is ~1–3 seconds.
+Ask the user (or infer from context) what the doc covers. Map it to an existing category header in GPU-Eng-Notes:
 
-## 0. Detect environment first
+| Category | Topics |
+|---|---|
+| Microbench | Radeon microbench, hipMicroBench, perf measurement |
+| MIOpen | MIOpen library, convolution, kernels, CBA fusion |
+| Work with AI | AI coworking, onboarding guides, prompt patterns |
+| Troubleshooting | Bug investigations, ISA issues, build errors |
+| Cheatsheets | Quick-reference docs (Docker, git, CLI tools, etc.) |
 
-Run `hostname` to decide which workflow applies:
+If no existing category fits, you will create a new level-0 header page for the category before creating the content page.
 
-- **Server-side** (`hostname` starts with `hjbog-srdc-38`): `~/docs` IS the working tree the hook reads from, and `~/docs/.venv/bin/mkdocs` is available locally. You can verify the build directly and tail the hook log without SSH.
-- **Client-side** (any other host): the local clone is `~/docs` (clone with `git clone thohuang@hjbog-srdc-38:~/docs.git ~/docs` if missing), but `mkdocs` may or may not be installed locally. Verify by curling the published URL after push.
+## 2. Write the doc as inline-styled HTML
 
-The git workflow is identical in both cases: edit → commit → push to `origin` (`thohuang@hjbog-srdc-38:~/docs.git`). The hook fires regardless of who pushed.
+Write the document body as **HTML with inline styles**. Do NOT write markdown — write HTML directly. The inline styles simulate a clean rendered-Markdown appearance that OneNote preserves faithfully.
 
-## 1. Determine the topic and section
+Use these styling patterns:
 
-Ask the user (or infer from context) what the doc covers. Map it to an existing section in `~/docs/docs/` or create a new subfolder if the topic doesn't fit existing ones.
-
-Layout convention:
-```
-~/docs/docs/
-  index.md              # Landing page with links to all sections
-  microbench/           # Radeon Microbench + hipMicroBench
-  miopen/               # MIOpen library internals
-  <new-topic>/          # Add new folders as needed
+### Headings
+```html
+<h2 style="border-bottom: 1px solid #d0d7de; padding-bottom: 0.3em; margin-top: 1.5em;">Section Title</h2>
+<h3 style="margin-top: 1.2em;">Subsection Title</h3>
 ```
 
-Before writing, run `git -C ~/docs pull --ff-only` so you start from the latest revision.
-
-## 2. Write the doc
-
-- Use clear markdown with proper headings, tables, and code blocks.
-- Start with a level-1 heading (`# Title`).
-- Keep it reference-oriented — facts, architecture, code patterns, not tutorials.
-- Include code snippets where they clarify behavior.
-- No emojis unless the user asks for them.
-
-## 3. Save to the central docs path
-
-Write the file to `~/docs/docs/<section>/<filename>.md`.
-
-## 4. Update mkdocs.yml nav
-
-Read `~/docs/mkdocs.yml`, then edit it to add the new page under the appropriate nav section. If the section doesn't exist, create a new top-level nav entry.
-
-## 5. Update the landing page
-
-Read `~/docs/docs/index.md` and add a link to the new doc under the appropriate section. If it's a new section, add a new heading and description.
-
-## 6. Local build check (optional)
-
-Only when `mkdocs` is available locally — usually only on the server, where `~/docs/.venv/bin/mkdocs` exists:
-
-```sh
-cd ~/docs && .venv/bin/mkdocs build   # server
-# or, if a system-wide mkdocs exists on a client:
-cd ~/docs && mkdocs build
+### Paragraphs
+```html
+<p style="line-height: 1.6; margin: 0.8em 0;">Body text here.</p>
 ```
 
-If `mkdocs` isn't installed locally, skip this — the server hook will catch syntax/nav errors and surface them in the post-receive log (see Troubleshooting).
-
-## 7. Stage, then ask before pushing
-
-Stage the new/changed files but **do not commit or push automatically**:
-```sh
-git -C ~/docs add docs/<section>/<filename>.md docs/index.md mkdocs.yml
-git -C ~/docs status
+### Code blocks
+```html
+<pre style="background-color: #f6f8fa; border: 1px solid #d0d7de; border-radius: 6px; padding: 16px; font-family: 'Consolas', 'Courier New', monospace; font-size: 13px; line-height: 1.45; overflow-x: auto; white-space: pre;"><code>code goes here</code></pre>
 ```
 
-Show the user the staged diff and a proposed commit message, then ask whether to commit and push. Only after explicit approval:
-```sh
-git -C ~/docs commit -m "<message>"
-git -C ~/docs push
+### Inline code
+```html
+<code style="background-color: #eff1f3; padding: 0.2em 0.4em; border-radius: 3px; font-family: 'Consolas', 'Courier New', monospace; font-size: 85%;">command</code>
 ```
 
-## 8. Verify propagation
-
-Wait ~3 seconds, then cache-bust to confirm the new content is live:
-
-```sh
-curl -sS "http://hjbog-srdc-38:8000/<path>?cb=$(date +%s)" | grep "<unique string from new doc>"
+### Tables
+```html
+<table style="border-collapse: collapse; width: 100%; margin: 1em 0;">
+  <thead>
+    <tr style="background-color: #f6f8fa;">
+      <th style="border: 1px solid #d0d7de; padding: 8px 12px; text-align: left;">Header</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="border: 1px solid #d0d7de; padding: 8px 12px;">Data</td>
+    </tr>
+  </tbody>
+</table>
 ```
 
-A `Build Date UTC : <recent timestamp>` line in the page footer confirms the rebuild fired. If the timestamp didn't advance or your unique string is missing, jump to Troubleshooting.
+### Lists
+```html
+<ul>
+  <li style="margin: 0.3em 0;">Item one</li>
+  <li style="margin: 0.3em 0;">Item two</li>
+</ul>
+```
 
-## 9. Report
+### Blockquotes / callouts
+```html
+<blockquote style="border-left: 4px solid #d0d7de; padding: 0.5em 1em; margin: 1em 0; color: #57606a;">
+  <p>Note or callout text.</p>
+</blockquote>
+```
+
+### Bold and emphasis
+Use standard `<strong>` and `<em>` tags — no special styling needed.
+
+### Important rules
+- Always use inline styles (not `<style>` blocks or class attributes) — OneNote strips those.
+- Do NOT wrap content in `<!DOCTYPE html>` or `<html>` tags — just write the body content. The MCP `createPage` tool wraps it in a full document.
+- Do NOT include an `<h1>` — the `createPage` tool adds one from the `title` parameter.
+- Keep the doc reference-oriented: facts, architecture, code patterns. Not tutorials.
+- No emojis unless the user asks.
+
+## 3. Create the page in OneNote
+
+Call the `createPage` MCP tool with:
+- **`title`**: the document title
+- **`content`**: the styled HTML body from Step 2
+- **`notebook`**: `"AMD-Work"`
+- **`section`**: `"GPU-Eng-Notes"`
+
+If you needed to create a new category header page (because no existing category fits), create it first:
+- Call `createPage` with `title` = category name, `content` = `<p><em>Category: [name]</em></p>`, `notebook` = `"AMD-Work"`, `section` = `"GPU-Eng-Notes"`.
+- Do NOT call `setPageLevel` on the header — it stays at level 0.
+
+## 4. Set the page as a subpage
+
+After the content page is created, call `setPageLevel` with:
+- **`pageId`**: the page ID returned by `createPage`
+- **`level`**: `1`
+
+This indents the page under its category header in the OneNote page list.
+
+## 5. Report
 
 Tell the user:
-- The local file path.
-- That changes are pushed and live at the appropriate URL under **http://hjbog-srdc-38:8000/**.
-- (If verification failed) the diagnostic from Troubleshooting.
-
-## Troubleshooting
-
-If the published page doesn't reflect a push:
-
-| Symptom | First check |
-|---|---|
-| `git push` rejected | SSH access to `hjbog-srdc-38`; identity in `~/.ssh/authorized_keys` on server |
-| Push succeeds but timestamp didn't move | Server-side: tail `~/docs/.git/post-receive.log`. Client-side: `ssh thohuang@hjbog-srdc-38 'tail -30 ~/docs/.git/post-receive.log'` |
-| `mkdocs build` errored in the log | Fix the markdown / nav and push again |
-| Hook log shows successful build but page is stale | `systemctl --user is-active docs-http.service` on the server; restart with `systemctl --user restart docs-http.service` if not active |
-| Page completely unreachable | `ss -tlnp | grep :8000` on the server to confirm the listener is bound |
-
-The serving stack on the server is intentionally simple — the hook log is authoritative.
+- The page title and that it is live in **AMD-Work → GPU-Eng-Notes → [Category]**.
+- Suggest they open OneNote to verify formatting, especially for code blocks and tables.
