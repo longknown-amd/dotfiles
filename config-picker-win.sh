@@ -6,21 +6,22 @@
 #
 # What it does:
 #   • Clones (or updates) the dotfiles bare repo into %USERPROFILE%\.dotfiles
-#   • Checks out .claude/ and .codex/ configs into %USERPROFILE%
+#   • Checks out only Windows-relevant paths from HEAD:
+#       .claude/  .codex/  config-picker.sh  config-picker-win.sh
+#     Linux-only configs (zsh, tmux, nvim, yazi, .agents, etc.) are skipped.
 #   • Merges any Windows-specific settings.json rules (deny lists, announcements)
 #     on top of the dotfiles base settings
 #
-# The UserPromptSubmit hook is a Python script (dotfiles-dirty-check.py) that
-# uses os.path.expanduser('~') for cross-platform home resolution — no bash or
-# USERPROFILE juggling needed at hook runtime.
+# SSH access to the repo is assumed to be already configured in ~/.ssh/config
+# (host alias + key path). The script does not touch SSH state.
 #
-# Linux-only configs (zsh, tmux, nvim, yazi) are intentionally skipped.
+# The UserPromptSubmit hook is a Python script (dotfiles-dirty-check.py) that
+# uses os.path.expanduser('~') for cross-platform home resolution.
 
 set -euo pipefail
 
 REPO_URL="git@github.com:longknown-amd/dotfiles.git"
 REPO_URL_HTTPS="https://github.com/longknown-amd/dotfiles.git"
-SSH_KEY_NAME="id_ed25519_longknown"   # key that has push access to the repo
 
 log()  { printf '\033[1;34m==>\033[0m %s\n' "$*"; }
 warn() { printf '\033[1;33m!! \033[0m %s\n' "$*" >&2; }
@@ -41,20 +42,11 @@ else
 fi
 
 DOT_DIR="$WINHOME/.dotfiles"
-SSH_KEY="$WINHOME/.ssh/$SSH_KEY_NAME"
 
 dot() { git --git-dir="$DOT_DIR" --work-tree="$WINHOME" "$@"; }
 
 # ---------------------------------------------------------------------------
-# 1. Verify SSH key exists
-# ---------------------------------------------------------------------------
-log "Checking SSH key: $SSH_KEY"
-[[ -f "$SSH_KEY" ]] || die "SSH key not found: $SSH_KEY\nAdd it to GitHub first: ssh-keygen -t ed25519 -f $SSH_KEY"
-
-export GIT_SSH_COMMAND="ssh -i $SSH_KEY -o StrictHostKeyChecking=no"
-
-# ---------------------------------------------------------------------------
-# 2. Clone or update the bare repo
+# 1. Clone or update the bare repo
 # ---------------------------------------------------------------------------
 if [[ -d "$DOT_DIR" ]]; then
     log "Bare repo already exists at $DOT_DIR — fetching latest"
@@ -73,15 +65,14 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# 3. Configure the bare repo
+# 2. Configure the bare repo
 # ---------------------------------------------------------------------------
 log "Configuring bare repo"
 dot config --local status.showUntrackedFiles no
-dot config --local core.sshCommand "ssh -i $SSH_KEY"
 dot config --local remote.origin.fetch '+refs/heads/*:refs/remotes/origin/*'
 
 # ---------------------------------------------------------------------------
-# 4. Backup existing Claude settings before overwriting
+# 3. Backup existing Claude settings before overwriting
 # ---------------------------------------------------------------------------
 CLAUDE_SETTINGS="$WINHOME/.claude/settings.json"
 SETTINGS_BACKUP=""
@@ -92,15 +83,15 @@ if [[ -f "$CLAUDE_SETTINGS" ]]; then
 fi
 
 # ---------------------------------------------------------------------------
-# 5. Selectively check out .claude/ and .codex/ only
-#    (Linux-only paths like .zshrc, .tmux.conf, .config/nvim are skipped)
+# 4. Selectively check out Windows-relevant paths only
 # ---------------------------------------------------------------------------
-log "Checking out .claude/ and .codex/ from HEAD"
-dot checkout HEAD -- .claude/ .codex/ .agents/ 2>/dev/null \
-    || dot checkout HEAD -f -- .claude/ .codex/ .agents/
+CHECKOUT_PATHS=(.claude/ .codex/ config-picker.sh config-picker-win.sh)
+log "Checking out from HEAD: ${CHECKOUT_PATHS[*]}"
+dot checkout HEAD -- "${CHECKOUT_PATHS[@]}" 2>/dev/null \
+    || dot checkout HEAD -f -- "${CHECKOUT_PATHS[@]}"
 
 # ---------------------------------------------------------------------------
-# 6. Merge Windows-specific settings on top of the dotfiles base
+# 5. Merge Windows-specific settings on top of the dotfiles base
 #    The hook command (python3 dotfiles-dirty-check.py) already works
 #    cross-platform via os.path.expanduser — no patching needed.
 # ---------------------------------------------------------------------------
@@ -145,7 +136,7 @@ print("settings.json merged.")
 PY
 
 # ---------------------------------------------------------------------------
-# 7. Done
+# 6. Done
 # ---------------------------------------------------------------------------
 log "Done. Claude and Codex configs synced from dotfiles."
 cat <<EOF
