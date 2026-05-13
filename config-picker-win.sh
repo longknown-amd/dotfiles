@@ -7,10 +7,12 @@
 # What it does:
 #   • Clones (or updates) the dotfiles bare repo into %USERPROFILE%\.dotfiles
 #   • Checks out .claude/ and .codex/ configs into %USERPROFILE%
-#   • Patches the UserPromptSubmit hook so it resolves %USERPROFILE% not $HOME
-#     (on Windows, Git Bash sets $HOME to a network/mapped drive, not C:\Users\…)
 #   • Merges any Windows-specific settings.json rules (deny lists, announcements)
 #     on top of the dotfiles base settings
+#
+# The UserPromptSubmit hook is a Python script (dotfiles-dirty-check.py) that
+# uses os.path.expanduser('~') for cross-platform home resolution — no bash or
+# USERPROFILE juggling needed at hook runtime.
 #
 # Linux-only configs (zsh, tmux, nvim, yazi) are intentionally skipped.
 
@@ -98,110 +100,52 @@ dot checkout HEAD -- .claude/ .codex/ .agents/ 2>/dev/null \
     || dot checkout HEAD -f -- .claude/ .codex/ .agents/
 
 # ---------------------------------------------------------------------------
-# 6. Patch the dirty-check hook for Windows
-#    The hook uses $HOME which resolves to the network drive on Windows.
-#    Replace the GIT_DIR/WORK_TREE assignments with a cross-platform block.
+# 6. Merge Windows-specific settings on top of the dotfiles base
+#    The hook command (python3 dotfiles-dirty-check.py) already works
+#    cross-platform via os.path.expanduser — no patching needed.
 # ---------------------------------------------------------------------------
-HOOK="$WINHOME/.claude/hooks/dotfiles-dirty-check.sh"
-if [[ -f "$HOOK" ]] && ! grep -q "USERPROFILE" "$HOOK"; then
-    log "Patching $HOOK for Windows HOME vs USERPROFILE"
-    python3 - "$HOOK" <<'PY'
-import sys
-
-path = sys.argv[1]
-with open(path) as f:
-    content = f.read()
-
-old = 'GIT_DIR="$HOME/.dotfiles"\nWORK_TREE="$HOME"'
-new = (
-    '# Cross-platform home (Windows Git Bash: $HOME != %USERPROFILE%)\n'
-    'if command -v cygpath >/dev/null 2>&1 && [[ -n "${USERPROFILE:-}" ]]; then\n'
-    '    _EFF_HOME=$(cygpath -u "$USERPROFILE")\n'
-    'else\n'
-    '    _EFF_HOME="$HOME"\n'
-    'fi\n'
-    'GIT_DIR="$_EFF_HOME/.dotfiles"\n'
-    'WORK_TREE="$_EFF_HOME"'
-)
-
-if old not in content:
-    print("Pattern not found — hook may already be patched or has changed. Skipping.")
-    sys.exit(0)
-
-content = content.replace(old, new)
-with open(path, 'w') as f:
-    f.write(content)
-print("Patched successfully.")
-PY
-else
-    log "Hook already patched or not present — skipping"
-fi
-chmod +x "$HOOK" 2>/dev/null || true
-
-# ---------------------------------------------------------------------------
-# 7. Patch settings.json
-#    • Fix the hook command to invoke the script via bash with USERPROFILE path
-#      (so Claude Code's hook runner finds it on the right drive)
-#    • Merge any Windows-specific deny/ask rules from the backup on top of the
-#      dotfiles base
-# ---------------------------------------------------------------------------
-log "Patching settings.json for Windows"
+log "Merging Windows-specific settings into settings.json"
 python3 - "$CLAUDE_SETTINGS" "${SETTINGS_BACKUP:-}" <<'PY'
-import json, sys, re
+import json, sys
 
 settings_path = sys.argv[1]
 backup_path   = sys.argv[2] if len(sys.argv) > 2 and sys.argv[2] else ""
 
-with open(settings_path) as f:
+with open(settings_path, encoding='utf-8') as f:
     merged = json.load(f)
 
-# -- 7a. Fix hook command: replace $HOME with bash + USERPROFILE invocation --
-def fix_hook_command(cmd):
-    # Replace bare $HOME script invocation with an explicit bash call using
-    # $USERPROFILE so it resolves correctly on Windows.
-    return re.sub(
-        r'\$HOME(/.+\.sh\b)',
-        r'bash "$USERPROFILE\1"',
-        cmd
-    )
-
-for event_list in merged.get("hooks", {}).values():
-    for hook_group in event_list:
-        for hook in hook_group.get("hooks", []):
-            if hook.get("type") == "command":
-                hook["command"] = fix_hook_command(hook["command"])
-
-# -- 7b. Merge deny/allow/ask from backed-up Windows settings ----------------
 if backup_path:
     try:
-        with open(backup_path) as f:
+        with open(backup_path, encoding='utf-8') as f:
             win = json.load(f)
+
         def merge_list(base, extra):
             seen = list(base)
             for item in extra:
                 if item not in seen:
                     seen.append(item)
             return seen
+
         bp = merged.setdefault("permissions", {})
         wp = win.get("permissions", {})
         for key in ("allow", "deny", "ask"):
             bp[key] = merge_list(bp.get(key, []), wp.get(key, []))
-        # Remove empty lists
         merged["permissions"] = {k: v for k, v in bp.items() if v}
-        # Keep Windows companyAnnouncements if dotfiles base has none
+
         if "companyAnnouncements" in win and "companyAnnouncements" not in merged:
             merged["companyAnnouncements"] = win["companyAnnouncements"]
+
     except Exception as e:
         print(f"Warning: could not merge backup settings: {e}", file=sys.stderr)
 
-with open(settings_path, 'w') as f:
+with open(settings_path, 'w', encoding='utf-8', newline='\n') as f:
     json.dump(merged, f, indent=2)
     f.write('\n')
-print("settings.json patched.")
+print("settings.json merged.")
 PY
 
 # ---------------------------------------------------------------------------
-# 8. Done
+# 7. Done
 # ---------------------------------------------------------------------------
 log "Done. Claude and Codex configs synced from dotfiles."
 cat <<EOF
