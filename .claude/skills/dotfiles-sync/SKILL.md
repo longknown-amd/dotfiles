@@ -17,7 +17,7 @@ The `-c status.showUntrackedFiles=no` flag is critical: `$HOME` contains thousan
 
 ## When to invoke
 
-- **Auto-trigger:** The `UserPromptSubmit` hook (`~/.claude/hooks/dotfiles-dirty-check.sh`) injects a reminder at the start of any turn where the dotfiles repo has uncommitted tracked changes. The hook only checks local state (it does NOT contact the remote — that would add network latency to every prompt). Remote-sync checking happens here, at push time. When you see the reminder, propose syncing — but only if the dirt looks related to what you've been working on this conversation.
+- **Auto-trigger:** The `UserPromptSubmit` hook (`~/.claude/hooks/dotfiles-dirty-check.py`) injects a reminder at the start of any turn where the dotfiles repo has uncommitted tracked changes. The hook only checks local state (it does NOT contact the remote — that would add network latency to every prompt). Remote-sync checking happens here, at push time. When you see the reminder, propose syncing — but only if the dirt looks related to what you've been working on this conversation.
 - **Explicit trigger:** The user says "sync dotfiles", "push my config", "commit my dotfiles", or invokes `/dotfiles-sync` directly.
 
 ## Workflow
