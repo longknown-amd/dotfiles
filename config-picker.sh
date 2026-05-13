@@ -501,6 +501,37 @@ if command -v nvim >/dev/null && [[ -f "$HOME/.config/nvim/init.lua" ]]; then
         warn "Lazy sync exited non-zero — open nvim to inspect"
 fi
 
+# 6d. Claude MCP servers (user scope) ----------------------------------------
+# ~/.claude.json is volatile and intentionally untracked, so the user-scope
+# `mcpServers` block can't be synced via git. Register here on each setup.
+# All steps are idempotent: skip if the server is already registered.
+if command -v claude >/dev/null; then
+    # onenote: local stdio server
+    ONENOTE_MCP="$HOME/.claude/mcp/onenote/onenote-mcp.mjs"
+    if command -v node >/dev/null && [[ -f "$ONENOTE_MCP" ]]; then
+        if claude mcp list 2>/dev/null | grep -q '^onenote[: ]'; then
+            log "claude MCP 'onenote' already registered"
+        else
+            log "Registering claude MCP 'onenote' at user scope"
+            claude mcp add -s user onenote -- node "$ONENOTE_MCP" \
+                || warn "claude mcp add for onenote failed"
+        fi
+    fi
+
+    # cloud-atlassian: remote MCP via npx mcp-remote (token expanded at runtime)
+    if command -v npx >/dev/null; then
+        if claude mcp list 2>/dev/null | grep -q '^cloud-atlassian[: ]'; then
+            log "claude MCP 'cloud-atlassian' already registered"
+        else
+            log "Registering claude MCP 'cloud-atlassian' at user scope"
+            claude mcp add -s user cloud-atlassian -- npx -y mcp-remote \
+                'https://mcp-platform.amd.com/mcp/cloud_atlassian' \
+                --header 'Authorization: Basic Thomas.Huang@amd.com@${ATLASSIAN_MCP_TOKEN}' \
+                || warn "claude mcp add for cloud-atlassian failed"
+        fi
+    fi
+fi
+
 # 7. Done --------------------------------------------------------------------
 log "Done. Next steps:"
 cat <<'EOF'
