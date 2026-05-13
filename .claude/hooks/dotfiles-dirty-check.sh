@@ -4,8 +4,14 @@
 # to invoke the dotfiles-sync skill. No-op when clean.
 set -uo pipefail
 
-GIT_DIR="$HOME/.dotfiles"
-WORK_TREE="$HOME"
+# Cross-platform home (Windows Git Bash: $HOME != %USERPROFILE%)
+if command -v cygpath >/dev/null 2>&1 && [[ -n "${USERPROFILE:-}" ]]; then
+    _EFF_HOME=$(cygpath -u "$USERPROFILE")
+else
+    _EFF_HOME="$HOME"
+fi
+GIT_DIR="$_EFF_HOME/.dotfiles"
+WORK_TREE="$_EFF_HOME"
 
 # Bail silently if the bare repo isn't present (e.g., on a fresh machine).
 [ -d "$GIT_DIR" ] || exit 0

@@ -11,6 +11,25 @@
       "WebSearch",
       "TodoWrite",
       "TodoRead"
+    ],
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Read(./secrets/**)",
+      "Read(./.aws/**)",
+      "Read(~/.ssh/**)",
+      "Read(./config/credentials.json)",
+      "Read(./appsettings.*.json)",
+      "Bash(curl:*)",
+      "Bash(wget:*)",
+      "Bash(rm -rf:*)",
+      "WebFetch"
+    ],
+    "ask": [
+      "Bash(git push:*)",
+      "Bash(npm publish:*)",
+      "Bash(docker:*)",
+      "Bash(kubectl:*)"
     ]
   },
   "model": "claude-opus-4-6",
@@ -24,7 +43,7 @@
           },
           {
             "type": "command",
-            "command": "$HOME/.claude/hooks/dotfiles-dirty-check.sh"
+            "command": "bash \"$USERPROFILE/.claude/hooks/dotfiles-dirty-check.sh\""
           }
         ]
       }
@@ -38,5 +57,11 @@
   "effortLevel": "xhigh",
   "theme": "auto",
   "editorMode": "vim",
-  "vim": true
+  "vim": true,
+  "companyAnnouncements": [
+    "Welcome to Claude Code - AMD Edition!",
+    "Review AMD coding standards before committing code",
+    "Security reminder: Never commit credentials, API keys, or sensitive data",
+    "Tip: Use /help to see available commands and features"
+  ]
 }
