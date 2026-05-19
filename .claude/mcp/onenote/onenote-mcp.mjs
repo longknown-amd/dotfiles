@@ -755,6 +755,39 @@ server.tool(
   }
 );
 
+// listSectionPages — scoped page listing that bypasses the global Graph
+// "too many sections" error that searchPages / getPageByTitle hit on
+// accounts with many sections. Calls /me/onenote/sections/{id}/pages
+// directly, so cost scales with one section's page count, not the
+// account total.
+server.tool(
+  'listSectionPages',
+  {
+    notebook: z.string().describe('Notebook name or ID (required — resolves the section unambiguously).'),
+    section: z.string().describe('Section name or ID within the notebook.'),
+    limit: z.number().int().min(1).max(100).optional().describe('Max pages to return (1–100). Default: 50.')
+  },
+  async ({ notebook, section, limit = 50 }) => {
+    try {
+      await ensureGraphClient();
+      const nbId = await resolveNotebookId(notebook);
+      const secId = await resolveSectionId(nbId, section);
+      const r = await graphClient
+        .api(`/me/onenote/sections/${secId}/pages?$top=${limit}&$orderby=lastModifiedDateTime desc`)
+        .get();
+      const pages = r.value || [];
+      if (pages.length === 0) {
+        return { content: [{ type: 'text', text: `📄 No pages in section "${section}".` }] };
+      }
+      const list = pages.map((p, i) => formatPageInfo(p, i)).join('\n\n');
+      return { content: [{ type: 'text',
+        text: `📄 Pages in "${section}" / "${notebook}" (${pages.length} found, sorted by last modified):\n\n${list}` }] };
+    } catch (error) {
+      return { isError: true, content: [{ type: 'text', text: `Failed to list section pages: ${error.message}` }] };
+    }
+  }
+);
+
 server.tool(
   'createSection',
   {
