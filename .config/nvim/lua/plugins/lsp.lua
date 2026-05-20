@@ -35,16 +35,15 @@ return {
             local cmp_nvim_lsp = require("cmp_nvim_lsp")
             local capabilities = cmp_nvim_lsp.default_capabilities()
 
-            vim.lsp.enable('clangd')
-            vim.lsp.enable('pyright')
-            vim.lsp.log.set_level(vim.log.levels.OFF)
-            vim.lsp.config.clangd = {
+            vim.lsp.log.set_level(vim.log.levels.WARN)
+
+            vim.lsp.config('clangd', {
                 cmd = {
                     "clangd",
                     "--background-index",
                     "--clang-tidy",
                     "--header-insertion=never",
-                    "--function-arg-placeholders",
+                    "--function-arg-placeholders=1",
                     "--fallback-style=llvm",
                     "--malloc-trim",
                     "-j=8",
@@ -52,7 +51,10 @@ return {
                 },
                 filetypes = { "c", "cpp", "h", "hpp", "objc", "objcpp", "cuda", "proto", "hip", "hiphpp", "cuh", "s", "asm" },
                 capabilities = capabilities,
-            }
+            })
+
+            vim.lsp.enable('clangd')
+            vim.lsp.enable('pyright')
         end
     },
 
