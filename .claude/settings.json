@@ -35,7 +35,7 @@
     "rust-analyzer-lsp@claude-plugins-official": true,
     "clangd-lsp@claude-plugins-official": true
   },
-  "effortLevel": "xhigh",
+  "effortLevel": "high",
   "theme": "auto",
   "editorMode": "vim",
   "vim": true
