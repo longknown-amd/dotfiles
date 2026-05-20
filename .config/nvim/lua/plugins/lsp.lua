@@ -48,6 +48,7 @@ return {
                     "--fallback-style=llvm",
                     "--malloc-trim",
                     "-j=8",
+                    "--query-driver=/opt/rocm/bin/amdclang++,/opt/rocm/llvm/bin/clang++,/usr/local/bin/amdclang++",
                 },
                 filetypes = { "c", "cpp", "h", "hpp", "objc", "objcpp", "cuda", "proto", "hip", "hiphpp", "cuh", "s", "asm" },
                 capabilities = capabilities,
