@@ -155,3 +155,11 @@ export DOCKER_GID=$(stat -c %g "$HOME")
 alias dc='docker compose'
 alias dcr='docker compose run --rm dev'
 alias cnorm='tput cnorm'    # resume lost cursor after some docker operations
+
+# Visual marker for in-container shells. `/.dockerenv` is the canonical
+# "we're inside a container" probe — present in Docker and most OCI
+# runtimes. Prepend a whale to the prompt so it's instantly distinguishable
+# from the host shell.
+if [[ -f /.dockerenv ]]; then
+    PROMPT="🐳 ${PROMPT}"
+fi
