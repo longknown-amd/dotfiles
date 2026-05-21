@@ -154,3 +154,4 @@ export DOCKER_GID=$(stat -c %g "$HOME")
 
 alias dc='docker compose'
 alias dcr='docker compose run --rm dev'
+alias cnorm='tput cnorm'    # resume lost cursor after some docker operations
