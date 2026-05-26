@@ -462,6 +462,21 @@ if [[ -z "$tmux_cur" ]] || ! version_ge "$tmux_cur" "$TMUX_MIN"; then
     rm -rf "$tm_dest"
     mv "$tm_tmp/squashfs-root" "$tm_dest"
     ln -sfn "$tm_dest" "$TMUX_PREFIX/current"
+    # Repair AppRun: upstream's version expands $APPDIR (set only by the
+    # AppImage *runtime*, never when extracted), so post-extract it becomes
+    # `export TERMINFO=/usr/share/terminfo` — pinning ncurses to a single
+    # path that on Ubuntu lacks xterm-256color (which lives in /lib/terminfo).
+    # Result: tmux bails with "missing or unsuitable terminal: xterm-256color"
+    # even though both system and bundled terminfo DBs contain the entry.
+    # Rewrite AppRun to derive APPDIR from its own location.
+    cat > "$tm_dest/AppRun" <<'APPRUN_EOF'
+#!/bin/bash
+unset ARGV0
+APPDIR="$(dirname "$(readlink -f "${0}")")"
+export TERMINFO="$APPDIR/usr/share/terminfo"
+exec "$APPDIR/usr/bin/tmux" ${@+"$@"}
+APPRUN_EOF
+    chmod +x "$tm_dest/AppRun"
     # AppRun is the entry shim that sets PATH/LD paths before exec'ing the
     # inner tmux binary. readlink -f inside it resolves through the
     # symlink, so libs are still located correctly when invoked as tmux.
