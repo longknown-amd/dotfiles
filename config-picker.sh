@@ -543,6 +543,15 @@ cat <<'EOF'
         dot commit -m "tweak"
         dot push
   • If your default shell isn't zsh:  chsh -s "$(command -v zsh)"
+        — If `chsh` isn't available (e.g. inside a container, or you
+          lack permission to edit /etc/passwd), drop this one line
+          into ~/.bashrc instead so every new login becomes zsh:
+
+              [ -z "$ZSH_VERSION" ] && [ -t 1 ] && exec /usr/bin/zsh -l
+
+          The guards: only triggers when the current shell isn't already
+          zsh ($ZSH_VERSION unset) and stdout is a TTY ($-t 1$) — so it
+          stays out of the way of scripts, CI, and piped invocations.
   • Inside tmux, prefix + I re-fetches plugins; prefix + U updates them.
 
 EOF
