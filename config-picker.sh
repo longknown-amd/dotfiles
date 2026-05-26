@@ -70,6 +70,15 @@ command -v axel >/dev/null   || need_pkgs+=(axel)
 command -v fzf >/dev/null    || need_pkgs+=(fzf)
 command -v unzip >/dev/null  || need_pkgs+=(unzip)
 command -v lldb-dap >/dev/null || need_pkgs+=(lldb)
+# Terminfo for the common $TERM values most SSH clients send. On minimal
+# Ubuntu images (cloud / container bases) ncurses-base may be missing or
+# truncated, and tmux then bails with "missing or unsuitable terminal:
+# xterm-256color" before it even attaches. ncurses-base owns xterm-256color
+# on Ubuntu; ncurses-term ships the extended set (rxvt, alacritty, foot,
+# wezterm, st, etc.) so users with non-default terminal emulators also work.
+if ! infocmp xterm-256color >/dev/null 2>&1; then
+    need_pkgs+=(ncurses-base ncurses-term)
+fi
 # (neovim is handled separately below — apt's version is too old.)
 if (( ${#need_pkgs[@]} )); then
     log "Installing: ${need_pkgs[*]}"
@@ -78,6 +87,26 @@ if (( ${#need_pkgs[@]} )); then
     # If installs fail because the cache is stale, run `sudo apt-get update`
     # manually and re-run this script.
     apt_install "${need_pkgs[@]}"
+fi
+
+# Belt-and-suspenders fallback: even after apt, some sandboxed/minimal
+# environments still miss xterm-256color (e.g. distroless containers,
+# read-only /usr, non-Debian distros where apt isn't reachable). Compile a
+# user-local copy into ~/.terminfo from the description the running ncurses
+# already knows, so tmux can find it via the standard $HOME search path.
+if ! infocmp xterm-256color >/dev/null 2>&1; then
+    if command -v tic >/dev/null && infocmp -x xterm >/dev/null 2>&1; then
+        warn "xterm-256color still missing — compiling a user-local fallback into ~/.terminfo"
+        mkdir -p "$HOME/.terminfo"
+        # Inherit xterm's caps and bump colors to 256; sufficient for tmux startup.
+        # The first line of `infocmp` is a comment; the declaration line begins
+        # with `xterm|`, so target it by pattern rather than line number.
+        { infocmp -x xterm | sed 's/^xterm|/xterm-256color|/; s/colors#8/colors#256/'; } \
+            | tic -x -o "$HOME/.terminfo" - 2>/dev/null \
+            || warn "tic failed; tmux may still complain — try: TERM=xterm tmux new"
+    else
+        warn "xterm-256color terminfo missing and no tic available — set TERM=xterm before tmux"
+    fi
 fi
 
 # 2. Clone or update the bare repo ------------------------------------------
