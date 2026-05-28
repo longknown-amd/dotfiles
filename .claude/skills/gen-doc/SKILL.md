@@ -49,8 +49,10 @@ Use these styling patterns:
 ```
 
 ### Tables
+**ALWAYS use `width: auto`** — never `width: 100%` or any fixed width. Tables must size to their content, not stretch across the page. This is a hard rule (user has corrected it multiple times).
+
 ```html
-<table style="border-collapse: collapse; width: 100%; margin: 1em 0;">
+<table style="border-collapse: collapse; width: auto; margin: 1em 0;">
   <thead>
     <tr style="background-color: #f6f8fa;">
       <th style="border: 1px solid #d0d7de; padding: 8px 12px; text-align: left;">Header</th>
