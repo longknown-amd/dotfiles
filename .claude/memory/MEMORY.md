@@ -1,0 +1,1 @@
+- [Preserve uncommitted before destructive git](feedback_preserve_uncommitted.md) — stash/commit M-files BEFORE reset --hard, rebase, branch switch; near-miss on 2026-05-28 with 160 lines of WIP.
