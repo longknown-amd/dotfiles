@@ -11,6 +11,8 @@ local function gfx_to_instruction_set(gfx)
     if gfx:match("^gfx94%d")      then return "amdgpu-gfx942" end   -- gfx940/941/942 → MI300
     if gfx == "gfx90a"            then return "amdgpu-gfx90a" end   -- MI200/250
     if gfx == "gfx908"            then return "amdgpu-gfx908" end   -- MI100
+    -- ----- gfx13x (AT2) → nearest available RDNA4 DB -----
+    if gfx:match("^gfx13%d")      then return "amdgpu-gfx12" end    -- gfx131x: no gfx13 DB yet, gfx12 ISA is the closest proxy
     -- ----- RDNA4 / RDNA3.5 / RDNA3 -----
     if gfx:match("^gfx12")        then return "amdgpu-gfx12" end    -- gfx1200/1201/12-generic
     if gfx:match("^gfx115%d")     then return "amdgpu-gfx11-5" end  -- gfx1150-1153 (Strix)

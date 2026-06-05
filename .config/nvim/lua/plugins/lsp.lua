@@ -49,7 +49,9 @@ return {
                     "-j=8",
                     "--query-driver=/opt/rocm/bin/amdclang++,/opt/rocm/llvm/bin/clang++,/usr/local/bin/amdclang++",
                 },
-                filetypes = { "c", "cpp", "h", "hpp", "objc", "objcpp", "cuda", "proto", "hip", "hiphpp", "cuh", "s", "asm" },
+                -- NB: "s"/"asm" intentionally excluded — assembly is handled by asm_lsp.
+                -- clangd otherwise attaches to .s files and tries to compile them as HIP.
+                filetypes = { "c", "cpp", "h", "hpp", "objc", "objcpp", "cuda", "proto", "hip", "hiphpp", "cuh" },
                 capabilities = capabilities,
             })
 
