@@ -16,6 +16,11 @@ The user maintains their `$HOME` configuration in a **bare git repo** at
 `git@github.com-longknown:longknown-amd/dotfiles.git` (`origin/main`).
 Tracked paths include `~/.claude/`, `~/.config/nvim/`, shell rc files, etc.
 
+A shell alias `dot` exists in the user’s zsh configuration
+(`alias dot='git --git-dir=$HOME/.dotfiles --work-tree=$HOME'`). Non-interactive
+shells (including Codex tool calls) do **not** load this alias, so always use
+the explicit git form below.
+
 A Codex hook plugin at `~/.agents/plugins/personal-hooks` runs
 `scripts/dotfiles-dirty-check.sh` on every `UserPromptSubmit` event. When the
 repo has tracked changes, the hook injects an additional-context reminder so

@@ -1,0 +1,106 @@
+# AMD LLM Gateway Configuration
+# Configured by AMD.ADE
+
+model = "gpt-5.5"
+model_provider = "amd_gateway"
+model_reasoning_effort = "high"
+
+[model_providers.amd_gateway]
+name = "AMD LLM Gateway"
+base_url = "https://llm-api.amd.com/openai/gpt-5-codex"
+wire_api = "responses"
+query_params = { api-version = "2025-04-01-preview" }
+http_headers = { "Ocp-Apim-Subscription-Key" = "a5f0a2713dec41b695578f0b10fef327" }
+
+# Profile for gpt-5-codex (default)
+[profiles.gpt-5-codex]
+model = "gpt-5-codex"
+model_provider = "amd_gateway"
+
+# Additional model profiles
+[profiles.o3]
+model = "o3"
+model_provider = "amd_gateway"
+
+[profiles.gpt-5-1]
+model = "gpt-5.1"
+model_provider = "amd_gateway"
+
+[profiles.gpt-5-2-codex]
+model = "gpt-5.2-codex"
+model_provider = "amd_gateway"
+
+# Approval and sandbox settings
+approval_policy = "on-request"
+sandbox_mode = "workspace-write"
+
+# History settings
+[history]
+persistence = "save-all"
+
+# Telemetry settings (disabled for AMD corporate environment)
+[telemetry]
+enabled = false
+
+# Feedback settings (disabled for AMD corporate environment)
+[feedback]
+enabled = false
+[projects.'C:\Users\thohuang\.codex']
+trust_level = "trusted"
+
+[projects.'C:\Users\thohuang']
+trust_level = "trusted"
+
+[projects."/home/thomas/.local/bin"]
+trust_level = "trusted"
+
+[projects."/home/thomas/projects/workspace"]
+trust_level = "trusted"
+
+[projects."/home/thomas/Documents/gpu-docs/docs/music"]
+trust_level = "trusted"
+
+[projects."/home/thohuang"]
+trust_level = "trusted"
+
+[projects."/home/thohuang/project/hipMicroBench"]
+trust_level = "trusted"
+
+[notice.model_migrations]
+gpt-5-codex = "gpt-5.3-codex"
+"gpt-5.3-codex" = "gpt-5.4"
+
+[tui.model_availability_nux]
+"gpt-5.5" = 4
+
+[features]
+# AMD gateway's gpt-5-codex (2025-09-15) rejects Codex's hosted dynamic
+# tool-search tool: "Tool 'tool_search' is not supported". Disable the whole
+# tool-search/suggest family so all tool defs are sent inline instead.
+tool_suggest = false
+tool_search = false
+search_tool = false
+terminal_resize_reflow = true
+memories = true
+external_migration = true
+goals = true
+
+[mcp_servers.onenote]
+command = "node"
+args = ["/home/thohuang/.claude/mcp/onenote/onenote-mcp.mjs"]
+working_directory = "/home/thohuang/.claude/mcp/onenote"
+
+[mcp_servers.onenote.tools.authenticate]
+approval_mode = "approve"
+
+[mcp_servers.onenote.tools.saveAccessToken]
+approval_mode = "approve"
+
+[mcp_servers.onenote.tools.listNotebooks]
+approval_mode = "approve"
+
+[mcp_servers.onenote.tools.listNotebookSections]
+approval_mode = "approve"
+
+[mcp_servers.onenote.tools.listSectionPages]
+approval_mode = "approve"
