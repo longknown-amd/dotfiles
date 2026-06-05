@@ -123,19 +123,56 @@ function M.setup()
                 vim.fn.writefile(lines, toml_path)
             end
 
-            if vim.fn.exists(":lsp") == 2 then
-                -- Neovim 0.12+ built-in
-                vim.cmd("lsp restart asm_lsp")
-            elseif vim.fn.exists(":LspRestart") == 2 then
-                -- nvim-lspconfig on Neovim <= 0.11
-                vim.cmd("LspRestart asm_lsp")
-            else
-                for _, c in ipairs(vim.lsp.get_clients({ name = "asm_lsp" })) do
-                    vim.lsp.stop_client(c.id)
+            local restarted = false
+            local clients = vim.lsp.get_clients({ name = "asm_lsp" })
+
+            if #clients > 0 then
+                if vim.fn.exists(":lsp") == 2 then
+                    -- Neovim 0.12+ built-in
+                    vim.cmd("lsp restart asm_lsp")
+                    restarted = true
+                elseif vim.fn.exists(":LspRestart") == 2 then
+                    -- nvim-lspconfig on Neovim <= 0.11
+                    vim.cmd("LspRestart asm_lsp")
+                    restarted = true
+                else
+                    for _, c in ipairs(clients) do
+                        vim.lsp.stop_client(c.id)
+                    end
+                    vim.defer_fn(function() vim.cmd("edit") end, 150)
+                    restarted = true
                 end
-                vim.defer_fn(function() vim.cmd("edit") end, 150)
+            else
+                if vim.lsp.enable then
+                    vim.lsp.enable("asm_lsp")
+                    restarted = true
+                elseif vim.fn.exists(":LspStart") == 2 then
+                    vim.cmd("LspStart asm_lsp")
+                    restarted = true
+                else
+                    local cfg = vim.lsp.config and vim.lsp.config["asm_lsp"]
+                    if cfg and vim.lsp.start then
+                        local start_opts = vim.tbl_deep_extend("force", {}, cfg, {
+                            name = "asm_lsp",
+                            bufnr = vim.api.nvim_get_current_buf(),
+                        })
+                        vim.lsp.start(start_opts)
+                        restarted = true
+                    end
+                end
+                if restarted then
+                    vim.defer_fn(function() vim.cmd("edit") end, 150)
+                end
             end
-            vim.notify("asm-lsp: switched to " .. isa, vim.log.levels.INFO)
+
+            if restarted then
+                vim.notify("asm-lsp: switched to " .. isa, vim.log.levels.INFO)
+            else
+                vim.notify(
+                    "asm-lsp: wrote config for " .. isa .. " but could not start asm_lsp client",
+                    vim.log.levels.WARN
+                )
+            end
         end)
     end, {})
 
