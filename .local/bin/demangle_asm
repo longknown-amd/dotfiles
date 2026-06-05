@@ -1,0 +1,135 @@
+#!/usr/bin/env python3
+"""Annotate AMDGCN .s/.ll asm with demangled C++ names.
+
+Every line is kept verbatim. A ``>>>DEMANGLED:`` line is emitted for each
+distinct mangled Itanium C++ symbol (``_Z...``), but only once per *run* of
+lines that mention it: the annotation is placed after the LAST line of the
+run. A run is ended by the next symbol-bearing line that does NOT contain the
+symbol -- lines with no mangled symbol at all (``.p2align``, comments, the
+instruction body, blanks) do not split a run. This collapses the repetition
+from a kernel's .section/.protected/.globl/.type/label block (and its
+trailing .set/.size block) down to a single annotation each.
+
+Each symbol on a line is handled independently, so when several different
+symbols share a line the ones that end there print while the ones that
+continue to the next symbol-bearing line are deferred.
+
+Note: a symbol that reappears after a *different* symbol (e.g. a kernel name,
+then its call operator on a .LBB label, then the kernel name again in the
+trailing metadata) is annotated once per run -- typically ~2x per function.
+
+Usage:
+    ./demangle_asm.py file.s [more.s ...]        # write annotated text to stdout
+    ./demangle_asm.py -i file.s [more.s ...]     # rewrite each file in place
+    ./demangle_asm.py file.s -o out.s            # write to a specific file
+
+Requires ``llvm-cxxfilt`` (binutils ``c++filt`` cannot demangle newer
+manglings such as ``DF16_`` / _Float16). Override with --cxxfilt.
+"""
+import argparse
+import re
+import shutil
+import subprocess
+import sys
+
+# Itanium mangled names start with _Z and never contain '.'. LLVM appends
+# artifact suffixes (.exit, .num_vgpr, ...) on labels and .set directives;
+# excluding '.' strips those so every reference to one kernel shares a single
+# identity -- which both collapses the .set/.size metadata block to one
+# annotation and keeps the demangled text free of " (.suffix)" noise.
+MANGLED = re.compile(r"_Z[A-Za-z0-9_$]+")
+PREFIX = ">>>DEMANGLED:"
+
+
+def find_demangler(explicit):
+    if explicit:
+        return explicit
+    for cand in ("llvm-cxxfilt", "c++filt"):
+        if shutil.which(cand):
+            return cand
+    sys.exit("error: no demangler found (install llvm-cxxfilt or pass --cxxfilt)")
+
+
+def build_map(symbols, cxxfilt):
+    """Batch-demangle a set of symbols -> {mangled: demangled}."""
+    if not symbols:
+        return {}
+    ordered = list(symbols)
+    proc = subprocess.run(
+        [cxxfilt],
+        input="\n".join(ordered) + "\n",
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    out = proc.stdout.splitlines()
+    return dict(zip(ordered, out))
+
+
+def annotate(text, cxxfilt):
+    lines = text.splitlines()
+    # Collect every unique symbol up front so we demangle in one subprocess.
+    symbols = set()
+    for line in lines:
+        symbols.update(MANGLED.findall(line))
+    table = build_map(symbols, cxxfilt)
+
+    # Per line, the ordered list of distinct symbols that actually demangle.
+    per_line = []
+    for line in lines:
+        seen = []
+        for m in MANGLED.findall(line):  # preserve order, drop dups per line
+            if m not in seen and table.get(m, m) != m:
+                seen.append(m)
+        per_line.append(seen)
+
+    # For each line, the symbol set of the nearest symbol-bearing line after it
+    # (skipping lines with no mangled symbol, so they never split a run).
+    following = [set()] * len(lines)
+    nxt = set()
+    for i in range(len(lines) - 1, -1, -1):
+        following[i] = nxt
+        if per_line[i]:
+            nxt = set(per_line[i])
+
+    result = []
+    for i, line in enumerate(lines):
+        result.append(line)
+        for m in per_line[i]:
+            # Run ends here unless the next symbol-bearing line also has it.
+            if m not in following[i]:
+                result.append(PREFIX + table[m])
+    return "\n".join(result) + "\n"
+
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__,
+                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("files", nargs="+", help="asm/ll files to annotate")
+    ap.add_argument("-i", "--in-place", action="store_true",
+                    help="rewrite each file in place")
+    ap.add_argument("-o", "--output", help="write to this file (single input only)")
+    ap.add_argument("--cxxfilt", help="demangler binary (default: llvm-cxxfilt)")
+    args = ap.parse_args()
+
+    cxxfilt = find_demangler(args.cxxfilt)
+
+    if args.output and len(args.files) != 1:
+        sys.exit("error: -o/--output requires exactly one input file")
+
+    for path in args.files:
+        with open(path, "r", errors="replace") as f:
+            annotated = annotate(f.read(), cxxfilt)
+        if args.in_place:
+            with open(path, "w") as f:
+                f.write(annotated)
+            print(f"annotated {path}", file=sys.stderr)
+        elif args.output:
+            with open(args.output, "w") as f:
+                f.write(annotated)
+        else:
+            sys.stdout.write(annotated)
+
+
+if __name__ == "__main__":
+    main()
