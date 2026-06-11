@@ -7,7 +7,7 @@ model_reasoning_effort = "high"
 
 [model_providers.amd_gateway]
 name = "AMD LLM Gateway"
-base_url = "https://llm-api.amd.com/openai/gpt-5-codex"
+base_url = "https://llm-api.amd.com/openai/gpt-5.5"
 wire_api = "responses"
 query_params = { api-version = "2025-04-01-preview" }
 http_headers = { "Ocp-Apim-Subscription-Key" = "a5f0a2713dec41b695578f0b10fef327" }
