@@ -3,12 +3,12 @@
 local dap = require("dap")
 local dap_python = require("dap-python")
 
-dap_python.setup("python")
+dap_python.setup("python3")
 
 -- Adapter and Python helpers
 dap.adapters.python = {
   type = "executable",
-  command = "python",                 -- or path to your global python
+  command = "python3",                -- python3 is the system interpreter
   args = { "-m", "debugpy.adapter" },
 }
 

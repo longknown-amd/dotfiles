@@ -20,6 +20,7 @@ return {
     config = function()
         require("aerial").setup({
             layout = { default_direction = "prefer_left" },
+            disable_max_lines = 0,
         })
     end
 }
