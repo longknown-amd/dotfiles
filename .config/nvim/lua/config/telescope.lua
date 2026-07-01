@@ -73,6 +73,15 @@ function Previewer:title(entry, dynamic)
 end
 
 telescope.setup {
+    defaults = {
+        preview = {
+            -- Disable treesitter highlighting in the previewer.
+            -- telescope calls vim.treesitter.highlighter.new() which crashes
+            -- with "attempt to index local 'tree' (a nil value)" when a file's
+            -- detected language has no installed parser (e.g. .cmake, .dj).
+            treesitter = false,
+        },
+    },
     extensions = {
         fzf = {
             fuzzy = true,

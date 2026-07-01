@@ -47,7 +47,7 @@ return {
                     "--fallback-style=llvm",
                     "--malloc-trim",
                     "-j=8",
-                    "--query-driver=/opt/rocm/bin/amdclang++,/opt/rocm/llvm/bin/clang++,/usr/local/bin/amdclang++",
+                    "--query-driver=/opt/rocm*/bin/amdclang++,/opt/rocm*/lib/llvm/bin/clang++,/opt/rocm/llvm/bin/clang++,/opt/rocm/bin/amdclang++,/usr/local/bin/amdclang++",
                 },
                 -- NB: "s"/"asm" intentionally excluded — assembly is handled by asm_lsp.
                 -- clangd otherwise attaches to .s files and tries to compile them as HIP.

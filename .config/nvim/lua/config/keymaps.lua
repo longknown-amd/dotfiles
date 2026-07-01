@@ -196,6 +196,11 @@ function M.setup()
     keymap.set("n", "<leader>fl", function()
         require("telescope.builtin").live_grep({ cwd = project_root() })
     end, { desc = "Live grep (project root)" })
+
+    keymap.set("n", "<leader>fs", function()
+        require("telescope.builtin").lsp_dynamic_workspace_symbols()
+    end, { desc = "Find symbol (workspace)" })
+
     vim.api.nvim_create_autocmd("LspAttach", {
       callback = function(args)
         local bufnr = args.buf
@@ -270,7 +275,7 @@ function M.setup()
         keymap.set("n", "<leader>cr", vim.lsp.buf.rename, opts)
 
         -- LSP info
-        keymap.set("n", "<leader>cl", "<cmd>LspInfo<CR>", opts)
+        keymap.set("n", "<leader>cl", "<cmd>checkhealth vim.lsp<CR>", opts)
 
         -- Call hierarchy
         keymap.set("n", "<leader>ci", "<cmd>Lspsaga incoming_calls<CR>", { buffer = bufnr, desc = "Incoming calls" })
