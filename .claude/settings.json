@@ -13,7 +13,7 @@
       "TodoRead"
     ]
   },
-  "model": "claude-sonnet-4-6[1m]",
+  "model": "opus",
   "disabledMcpjsonServers": [
     "cloud-atlassian",
     "onenote"
@@ -39,7 +39,6 @@
     "rust-analyzer-lsp@claude-plugins-official": true,
     "clangd-lsp@claude-plugins-official": true
   },
-  "effortLevel": "xhigh",
   "theme": "auto",
   "editorMode": "vim",
   "vim": true
