@@ -45,13 +45,8 @@ function M.setup()
 
     -- Switch asm-lsp instruction set for the current directory
     vim.api.nvim_create_user_command("AsmISA", function()
-        -- Discover supported ISAs from the plugin's serialized opcode directory
+        local bin = vim.fn.stdpath("data") .. "/lazy/asm-lsp/target/release/asm-lsp"
         local opcodes_dir = vim.fn.stdpath("data") .. "/lazy/asm-lsp/asm-lsp/serialized/opcodes"
-        local entries = vim.fn.readdir(opcodes_dir)
-        if not entries or #entries == 0 then
-            vim.notify("asm-lsp: no opcodes found in " .. opcodes_dir, vim.log.levels.ERROR)
-            return
-        end
 
         -- Map opcode filenames to TOML instruction_set values
         -- Filenames use underscores (x86_64), TOML uses hyphens (x86-64)
@@ -59,19 +54,76 @@ function M.setup()
         -- "mars" is an assembler, not an architecture
         local skip = { mars = true }
 
-        local isa_list = {}
-        for _, name in ipairs(entries) do
-            if not skip[name] then
-                local toml_name = filename_to_toml[name] or name
-                table.insert(isa_list, toml_name)
+        local entries_list = {}
+
+        -- Try the new list-targets subcommand for AMDGPU entries
+        local amdgpu_ok = false
+        local ok, result = pcall(function()
+            return vim.system({ bin, "list-targets" }, { text = true }):wait()
+        end)
+        if ok and result and result.code == 0 and result.stdout and result.stdout ~= "" then
+            for line in result.stdout:gmatch("[^\r\n]+") do
+                local gfx, label, isa = line:match("^([^\t]*)\t([^\t]*)\t([^\t]*)$")
+                if isa and isa ~= "" then
+                    local display
+                    local mcpu
+                    if gfx ~= "" then
+                        display = gfx .. " — " .. label
+                        mcpu = gfx
+                    else
+                        display = label
+                        mcpu = nil
+                    end
+                    table.insert(entries_list, { display = display, isa = isa, mcpu = mcpu })
+                    amdgpu_ok = true
+                end
             end
         end
-        table.sort(isa_list)
 
-        vim.ui.select(isa_list, {
+        if not amdgpu_ok then
+            vim.notify(
+                "asm-lsp: list-targets unavailable, falling back to opcode directory listing",
+                vim.log.levels.WARN
+            )
+            local entries = vim.fn.readdir(opcodes_dir)
+            if not entries or #entries == 0 then
+                vim.notify("asm-lsp: no opcodes found in " .. opcodes_dir, vim.log.levels.ERROR)
+                return
+            end
+            local isa_list = {}
+            for _, name in ipairs(entries) do
+                if not skip[name] then
+                    local toml_name = filename_to_toml[name] or name
+                    table.insert(isa_list, toml_name)
+                end
+            end
+            table.sort(isa_list)
+            for _, isa in ipairs(isa_list) do
+                table.insert(entries_list, { display = isa, isa = isa, mcpu = nil })
+            end
+        else
+            -- Non-AMDGPU ISAs from the opcode directory, sorted alphabetically
+            local entries = vim.fn.readdir(opcodes_dir) or {}
+            local non_amdgpu = {}
+            for _, name in ipairs(entries) do
+                if not skip[name] and not name:match("^amdgpu%-") then
+                    local toml_name = filename_to_toml[name] or name
+                    table.insert(non_amdgpu, toml_name)
+                end
+            end
+            table.sort(non_amdgpu)
+            for _, isa in ipairs(non_amdgpu) do
+                table.insert(entries_list, { display = isa, isa = isa, mcpu = nil })
+            end
+        end
+
+        vim.ui.select(entries_list, {
             prompt = "Select instruction set:",
-        }, function(isa)
-            if not isa then return end
+            format_item = function(e) return e.display end,
+        }, function(choice)
+            if not choice then return end
+            local isa = choice.isa
+            local mcpu = choice.mcpu
             local dir = vim.fn.expand("%:p:h")
             local toml_path = dir .. "/.asm-lsp.toml"
 
@@ -93,7 +145,6 @@ function M.setup()
 
             if patched then
                 -- Also update compile_flags_txt mcpu if switching AMDGPU targets
-                local mcpu = isa:match("^amdgpu%-(.+)$")
                 if mcpu then
                     for i, line in ipairs(existing) do
                         if line:match('^%s*compile_flags_txt%s*=') then
@@ -111,7 +162,6 @@ function M.setup()
                     ('instruction_set = "%s"'):format(isa),
                     '',
                 }
-                local mcpu = isa:match("^amdgpu%-(.+)$")
                 if mcpu then
                     vim.list_extend(lines, {
                         '[default_config.opts]',
