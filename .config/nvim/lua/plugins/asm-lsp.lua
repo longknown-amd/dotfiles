@@ -1,26 +1,25 @@
--- Map a GFX codename from .amdgcn_target to an asm-lsp instruction_set string.
--- Source: LLVM GCNProcessors.td plus the family-level Arch variants exposed
--- by the longknown-amd/asm-lsp fork (feature/amdgpu-isa-support).
--- Order matters: most-specific patterns must come before broader prefix matches.
+-- Resolve a GFX codename (from .amdgcn_target) to an asm-lsp instruction_set
+-- string by querying the asm-lsp binary's `resolve-target` subcommand. The
+-- mapping lives in the asm-lsp plugin (built from source), not in this repo.
+local isa_cache = {}
 local function gfx_to_instruction_set(gfx)
-    -- ----- CDNA4 family -----
-    if gfx == "gfx1251"           then return "amdgpu-gfx1251" end
-    if gfx:match("^gfx125%d")     then return "amdgpu-gfx1250" end  -- gfx1250 and future 125x
-    if gfx == "gfx950"            then return "amdgpu-gfx950" end
-    -- ----- CDNA3 / CDNA2 / CDNA1 -----
-    if gfx:match("^gfx94%d")      then return "amdgpu-gfx942" end   -- gfx940/941/942 → MI300
-    if gfx == "gfx90a"            then return "amdgpu-gfx90a" end   -- MI200/250
-    if gfx == "gfx908"            then return "amdgpu-gfx908" end   -- MI100
-    -- ----- gfx13x (AT2) → nearest available RDNA4 DB -----
-    if gfx:match("^gfx13%d")      then return "amdgpu-gfx12" end    -- gfx131x: no gfx13 DB yet, gfx12 ISA is the closest proxy
-    -- ----- RDNA4 / RDNA3.5 / RDNA3 -----
-    if gfx:match("^gfx12")        then return "amdgpu-gfx12" end    -- gfx1200/1201/12-generic
-    if gfx:match("^gfx115%d")     then return "amdgpu-gfx11-5" end  -- gfx1150-1153 (Strix)
-    if gfx:match("^gfx11")        then return "amdgpu-gfx11" end    -- gfx1100-1103/11-generic
-    -- ----- RDNA2 / RDNA1 -----
-    if gfx:match("^gfx103%d")     then return "amdgpu-gfx10-3" end  -- gfx1030-1036 (Navi2x)
-    if gfx:match("^gfx101%d")     then return "amdgpu-gfx10" end    -- gfx1010-1013 (Navi1x)
-    if gfx:match("^gfx10")        then return "amdgpu-gfx10" end    -- gfx10-generic fallback
+    local cached = isa_cache[gfx]
+    if cached ~= nil then
+        return cached or nil
+    end
+    local bin = vim.fn.stdpath("data") .. "/lazy/asm-lsp/target/release/asm-lsp"
+    local isa
+    if vim.fn.executable(bin) == 1 then
+        local res = vim.system({ bin, "resolve-target", gfx }, { text = true }):wait()
+        if res.code == 0 then
+            local out = vim.trim(res.stdout or "")
+            if out ~= "" then
+                isa = out
+            end
+        end
+    end
+    isa_cache[gfx] = isa or false
+    return isa
 end
 
 -- Scan the first 50 lines of a buffer for .amdgcn_target and return the GFX
@@ -43,6 +42,21 @@ local function read_toml_instruction_set(toml_path)
     end
 end
 
+-- asm-lsp's fork lives in a bare repo on hjbog-srdc-38
+-- (/home/thohuang/project/asm-lsp.git). That box's own SSH-registered key
+-- lives on client laptops, not on the box itself, so it can never SSH to
+-- itself -- use a local filesystem path there, and ssh:// everywhere else.
+local ASM_LSP_HOST_PATTERN = "^hjbog%-srdc%-38"
+local asm_lsp_url
+do
+    local hostname = (vim.uv or vim.loop).os_gethostname()
+    if hostname:match(ASM_LSP_HOST_PATTERN) then
+        asm_lsp_url = "/home/thohuang/project/asm-lsp.git"
+    else
+        asm_lsp_url = "ssh://thohuang@hjbog-srdc-38.amd.com/home/thohuang/project/asm-lsp.git"
+    end
+end
+
 return {
     {
         -- AMD GCN syntax plugin. Now hosted on GitHub so destination boxes
@@ -57,10 +71,11 @@ return {
     },
     {
         "bergercookie/asm-lsp",
-        -- Override with fork branch until PR is merged upstream.
-        -- Once merged, remove the two lines below to track upstream master.
-        url = "https://github.com/longknown-amd/asm-lsp.git",
-        branch = "feature/amdgpu-isa-support",
+        -- Fork hosted on hjbog-srdc-38 (bare repo at
+        -- /home/thohuang/project/asm-lsp.git) with AMD GPU ISA support added.
+        -- See asm_lsp_url above for why the URL is chosen per-host.
+        url = asm_lsp_url,
+        branch = "main",
         build = "cargo build --release",
         ft = { "asm", "s", "S" },
         config = function()
