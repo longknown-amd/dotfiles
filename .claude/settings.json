@@ -13,7 +13,7 @@
       "TodoRead"
     ]
   },
-  "model": "opus",
+  "model": "claude-sonnet-5[1m]",
   "disabledMcpjsonServers": [
     "cloud-atlassian",
     "onenote"
