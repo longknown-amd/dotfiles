@@ -13,9 +13,13 @@ bench_kernel_map.py -- convert between hipMicroBench *bench test-case names*
 How the map is built (see SKILL.md for the full decision tree):
 
   * KERNEL SIDE (always offline, exact): read the host ELF with `llvm-nm`, take every
-    `__device_stub__kentry<...>` symbol, demangle with `llvm-cxxfilt`, and derive the real
-    *device* symbol by the verified rename  `__device_stub__kentry` -> `kentry`
-    (`_ZN9hip_bench21__device_stub__kentry...` -> `_ZN9hip_bench6kentry...`).
+    `__device_stub__kentry<...>` symbol (both the generic `kentry<MinBlockPerCu, Impl, Args>`
+    entry point and the `kentry_wavegroup_256<Impl, Args>` entry point used by gfx13
+    wavegroup-scheduled coexec kernels -- same idea, no MinBlockPerCu arg, fixed 256-thread
+    block), demangle with `llvm-cxxfilt`, and derive the real *device* symbol by the verified
+    rename `__device_stub__<name>` -> `<name>`
+    (`_ZN9hip_bench21__device_stub__kentry...` -> `_ZN9hip_bench6kentry...`,
+     `_ZN9hip_bench35__device_stub__kentry_wavegroup_256...` -> `_ZN9hip_bench20kentry_wavegroup_256...`).
 
   * BENCH-NAME SIDE: joined to the kernel side on the (normalized) KernelImpl type via
     one of two sources --
@@ -382,7 +386,17 @@ class _MangleParser:
         raise ValueError("unhandled type at %d: %r" % (i, s[i:i + 12]))
 
     def _sub_ref(self):
-        # S_ , S0_ , S1_ ... -> we return a placeholder readable name
+        # S_ , S0_ , S1_ ... -> look up our (best-effort, incomplete) substitution table.
+        # NOTE: this parser's substitution-table bookkeeping does not fully replicate the
+        # Itanium ABI's substitution rules (verified empirically: e.g. it undercounts entries
+        # for constructs like `Kernel<Mad, Mad, ...>` where a template arg repeats an earlier
+        # one, so `S2_`-style back-references can resolve to the wrong -- or a nonexistent --
+        # table slot). Silently guessing here (as this used to do, defaulting to "hip_bench")
+        # produces confidently-wrong impl strings with no indication anything went wrong. Raise
+        # instead: the caller (extract_kernel_forms) catches this and falls back to the
+        # llvm-cxxfilt demangled text, which resolves substitutions correctly since it's a real
+        # Itanium demangler; only the exotic vendor float/_BitInt cases legitimately need the
+        # from-mangling path instead of cxxfilt's output.
         m = re.match(r"S(\d*)_", self.s[self.i:])
         if not m:
             raise ValueError("bad substitution")
@@ -390,7 +404,8 @@ class _MangleParser:
         idx = 0 if m.group(1) == "" else int(m.group(1), 36) + 1
         if idx < len(self.subs):
             return self.subs[idx]
-        return "hip_bench"  # S_ is the first sub = the hip_bench namespace
+        raise ValueError("substitution index %d out of range (table has %d entries) -- "
+                         "this parser's substitution tracking is incomplete" % (idx, len(self.subs)))
 
     def _nested(self):
         assert self.s[self.i] == "N"
@@ -475,40 +490,103 @@ class _MangleParser:
             self.i += 1
 
 
+# kentry entry-point variants seen in hip_bench binaries:
+#   kentry<MinBlockPerCu, KernelImpl, KernelArgs...>              -- the general case
+#   kentry_wavegroup_256<KernelImpl, KernelArgs...>                -- gfx13 wavegroup coexec
+#     kernels (CoexecScheduleType::CoexecWavegroup); fixed 256-thread block, no MinBlockPerCu
+#     template arg, so it can't be confused with `kentry` by name length alone.
+# (name, has_min_block_per_cu_leading_int_arg)
+KENTRY_VARIANTS = [
+    ("kentry_wavegroup_256", False),
+    ("kentry", True),
+]
+_KENTRY_HAS_MINBLK = dict(KENTRY_VARIANTS)
+_KENTRY_HEAD_RE = re.compile(r"_ZN9hip_bench\d+(kentry(?:_wavegroup_256)?)I")
+
+
 def parse_kentry_mangled(dev_mangled):
-    """device kentry symbol -> {min_block_per_cu, impl} parsed from the mangling.
-       Returns None if it is not a kentry symbol."""
-    m = re.match(r"_ZN9hip_bench6kentryILi(\d+)E", dev_mangled)
-    if not m:
+    """device kentry (or kentry_wavegroup_256) symbol -> {min_block_per_cu, impl,
+       kentry_variant} parsed from the mangling. Returns None if it is not a kentry symbol."""
+    m = _KENTRY_HEAD_RE.match(dev_mangled)
+    if not m or m.group(1) not in _KENTRY_HAS_MINBLK:
         return None
-    minblk = int(m.group(1))
+    variant = m.group(1)
+    pos = m.end()
+    minblk = None
+    if _KENTRY_HAS_MINBLK[variant]:
+        mi = re.match(r"Li(\d+)E", dev_mangled[pos:])
+        if not mi:
+            return None
+        minblk = int(mi.group(1))
+        pos += mi.end()
     p = _MangleParser(dev_mangled)
-    p.i = m.end()          # positioned right after `Li<n>E`
+    p.i = pos               # positioned right at the KernelImpl template arg
     p.subs = ["hip_bench"]  # S_ -> hip_bench
     try:
-        impl = p.parse_type()  # the KernelImpl type (2nd template arg of kentry)
+        impl = p.parse_type()  # the KernelImpl type
     except Exception:
         return None
     impl = re.sub(r"^hip_bench::", "", impl)
-    return {"min_block_per_cu": minblk, "impl": impl}
+    return {"min_block_per_cu": minblk, "impl": impl, "kentry_variant": variant}
 
 
-def synth_demangled(minblk, impl):
+def synth_demangled(rec):
+    impl = rec["impl"]
     full = impl if impl.startswith("hip_bench::") else "hip_bench::" + impl
-    return ("void hip_bench::kentry<%d, %s, %s::KernelArgs>(%s::KernelArgs)"
-            % (minblk, full, full, full))
+    variant = rec.get("kentry_variant", "kentry")
+    if variant == "kentry":
+        return ("void hip_bench::kentry<%d, %s, %s::KernelArgs>(%s::KernelArgs)"
+                % (rec["min_block_per_cu"], full, full, full))
+    return ("void hip_bench::%s<%s, %s::KernelArgs>(%s::KernelArgs)"
+            % (variant, full, full, full))
 
 
 # --------------------------------------------------------------------------------------
 # ELF -> kernel-forms table
 # --------------------------------------------------------------------------------------
-STUB_MANGLED_RE = re.compile(r"_ZN9hip_bench21__device_stub__kentry")
+def _stub_marker(name):
+    return "9hip_bench%d__device_stub__%s" % (len("__device_stub__" + name), name)
+
+
+def _device_marker(name):
+    return "9hip_bench%d%s" % (len(name), name)
+
+
+STUB_MANGLED_RE = re.compile(
+    "|".join(re.escape(_stub_marker(name)) for name, _ in KENTRY_VARIANTS))
+
+
+def _stub_to_device_mangled(stub):
+    for name, _ in KENTRY_VARIANTS:
+        old = _stub_marker(name)
+        if old in stub:
+            return stub.replace(old, _device_marker(name), 1)
+    return None
 
 
 def _run(cmd, stdin=None):
     p = subprocess.run(cmd, input=stdin, stdout=subprocess.PIPE,
                        stderr=subprocess.DEVNULL, universal_newlines=True)
     return p.stdout
+
+
+def _impl_from_demangled(dem):
+    """Fallback extraction of {impl, kentry_variant, min_block_per_cu} straight from the
+       (correctly substitution-resolved) llvm-cxxfilt output, for when the from-mangling
+       parser can't be trusted (see _MangleParser._sub_ref). Returns None if dem doesn't
+       look like a kentry/kentry_wavegroup_256 demangling at all."""
+    for name, has_minblk in KENTRY_VARIANTS:
+        m = re.match(r"^void hip_bench::" + re.escape(name) + r"<(.*)>\(.*\)$", dem)
+        if not m:
+            continue
+        args = split_args(m.group(1))
+        impl_args = args[1:-1] if has_minblk else args[:-1]
+        if not impl_args:
+            continue
+        impl = re.sub(r"^hip_bench::", "", ", ".join(impl_args))
+        minblk = int(args[0]) if has_minblk else None
+        return {"min_block_per_cu": minblk, "impl": impl, "kentry_variant": name}
+    return None
 
 
 def extract_kernel_forms(binary):
@@ -528,24 +606,37 @@ def extract_kernel_forms(binary):
     if not stub_mangled:
         _die("no __device_stub__kentry symbols in %s (not a hipMicroBench binary?)" % binary)
 
-    # device symbol = stub symbol with `21__device_stub__kentry` -> `6kentry`
-    dev_mangled = [s.replace("9hip_bench21__device_stub__kentry", "9hip_bench6kentry", 1)
-                   for s in stub_mangled]
+    # device symbol = stub symbol with `__device_stub__<name>` -> `<name>` for each known
+    # kentry variant (see KENTRY_VARIANTS).
+    dev_mangled = [_stub_to_device_mangled(s) or s for s in stub_mangled]
     demangled = _run([CXXFILT], stdin="\n".join(dev_mangled) + "\n").splitlines()
 
-    entries, dropped = [], 0
+    entries, dropped, recovered = [], 0, 0
     for mang, dem in zip(dev_mangled, demangled):
-        # type identity comes from the mangling (unambiguous); never trust the lossy
-        # demangler for it -- that silently drops bf16/_BitInt kernels.
+        dem = dem.strip()
+        # type identity normally comes from the mangling (unambiguous); never trust the
+        # lossy demangler for it -- that silently drops bf16/_BitInt kernels. But the
+        # from-mangling parser's substitution-table tracking is itself incomplete (raises
+        # rather than guessing -- see _MangleParser._sub_ref), so when IT fails, fall back
+        # to cxxfilt's demangled text: it resolves substitutions correctly, and the only
+        # reason to distrust it in the first place (exotic vendor types) doesn't apply to
+        # symbols that got this far without hitting one.
         rec = parse_kentry_mangled(mang)
+        if rec is None:
+            rec = _impl_from_demangled(dem)
+            if rec is not None:
+                recovered += 1
         if rec is None:
             dropped += 1
             continue
-        dem = dem.strip()
         rec["demangled"] = (dem if dem.startswith("void hip_bench::kentry")
-                            else synth_demangled(rec["min_block_per_cu"], rec["impl"]))
+                            else synth_demangled(rec))
         rec["mangled"] = mang
         entries.append(rec)
+    if recovered:
+        sys.stderr.write("note: %d kentry symbol(s) in %s recovered via demangled-text "
+                         "fallback (mangling substitution parse was unreliable for these)\n"
+                         % (recovered, os.path.basename(binary)))
     if dropped:
         sys.stderr.write("warning: %d kentry symbol(s) in %s could not be parsed\n"
                          % (dropped, os.path.basename(binary)))

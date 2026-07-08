@@ -37,7 +37,13 @@ map("n", "<leader>dl", function()
 end, opts)
 map("n", "<leader>dr", function() dap.repl.open() end, opts)    -- Open REPL
 map("n", "<leader>du", function() dapui.toggle() end, opts)     -- Toggle UI
-map("n", "<leader>de", function() dap.set_exception_breakpoints({"raised"}) end, opts)
+-- "uncaught" only: stop on exceptions that would crash the program. Do NOT use
+-- {"raised"} here — apps with background services (e.g. SONAR's git_monitor,
+-- email, scheduler) raise-and-catch exceptions constantly at startup, which with
+-- "raised" would suspend the app before app.run() ever binds its port.
+map("n", "<leader>de", function() dap.set_exception_breakpoints({"uncaught"}) end, opts)
+-- Clear all exception breakpoints (recover from an over-eager exception stop).
+map("n", "<leader>dE", function() dap.set_exception_breakpoints({}) end, opts)
 
 local hover_opts = {
     border = "double",

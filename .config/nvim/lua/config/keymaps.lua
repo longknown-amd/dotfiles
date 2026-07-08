@@ -173,55 +173,66 @@ function M.setup()
                 vim.fn.writefile(lines, toml_path)
             end
 
-            local restarted = false
-            local clients = vim.lsp.get_clients({ name = "asm_lsp" })
+            -- Restart asm_lsp so it re-reads the .asm-lsp.toml we just wrote.
+            -- The subtle part is ROOT: a stale client is often rooted at a
+            -- parent dir (e.g. the nearest .git) and keeps looking for
+            -- .asm-lsp.toml *there*, ignoring the one we just wrote in `dir`.
+            -- A plain LspRestart / :edit reuses that stale root, so instead we
+            -- force-stop every asm_lsp client, wait for them to actually exit,
+            -- then start a fresh client with an explicit root_dir = dir. An
+            -- explicit string root_dir bypasses the config's root_dir() search
+            -- entirely, guaranteeing the server loads dir/.asm-lsp.toml.
+            local bufnr = vim.api.nvim_get_current_buf()
+            local old_ids = {}
+            for _, c in ipairs(vim.lsp.get_clients({ name = "asm_lsp" })) do
+                old_ids[#old_ids + 1] = c.id
+                vim.lsp.stop_client(c.id, true) -- force = true: don't wait for a graceful shutdown
+            end
 
-            if #clients > 0 then
-                if vim.fn.exists(":lsp") == 2 then
-                    -- Neovim 0.12+ built-in
-                    vim.cmd("lsp restart asm_lsp")
-                    restarted = true
-                elseif vim.fn.exists(":LspRestart") == 2 then
-                    -- nvim-lspconfig on Neovim <= 0.11
-                    vim.cmd("LspRestart asm_lsp")
-                    restarted = true
-                else
-                    for _, c in ipairs(clients) do
-                        vim.lsp.stop_client(c.id)
-                    end
-                    vim.defer_fn(function() vim.cmd("edit") end, 150)
-                    restarted = true
+            local function start_fresh()
+                local cfg = vim.lsp.config and vim.lsp.config["asm_lsp"]
+                if not (cfg and vim.lsp.start) then
+                    vim.notify("asm-lsp: no config available to start client", vim.log.levels.ERROR)
+                    return
                 end
-            else
-                if vim.lsp.enable then
-                    vim.lsp.enable("asm_lsp")
-                    restarted = true
-                elseif vim.fn.exists(":LspStart") == 2 then
-                    vim.cmd("LspStart asm_lsp")
-                    restarted = true
+                local start_cfg = vim.tbl_deep_extend("force", {}, cfg)
+                start_cfg.name = "asm_lsp"
+                start_cfg.root_dir = dir -- explicit string overrides the async root_dir()
+                local ok, id_or_err = pcall(vim.lsp.start, start_cfg, { bufnr = bufnr })
+                if ok and id_or_err then
+                    vim.notify(
+                        ("asm-lsp: switched to %s (root %s)"):format(isa, dir),
+                        vim.log.levels.INFO)
                 else
-                    local cfg = vim.lsp.config and vim.lsp.config["asm_lsp"]
-                    if cfg and vim.lsp.start then
-                        local start_opts = vim.tbl_deep_extend("force", {}, cfg, {
-                            name = "asm_lsp",
-                            bufnr = vim.api.nvim_get_current_buf(),
-                        })
-                        vim.lsp.start(start_opts)
-                        restarted = true
-                    end
-                end
-                if restarted then
-                    vim.defer_fn(function() vim.cmd("edit") end, 150)
+                    vim.notify(
+                        "asm-lsp: wrote config for " .. isa .. " but could not start asm_lsp client",
+                        vim.log.levels.WARN)
                 end
             end
 
-            if restarted then
-                vim.notify("asm-lsp: switched to " .. isa, vim.log.levels.INFO)
+            if #old_ids == 0 then
+                start_fresh()
             else
-                vim.notify(
-                    "asm-lsp: wrote config for " .. isa .. " but could not start asm_lsp client",
-                    vim.log.levels.WARN
-                )
+                -- Poll until the force-stopped clients are gone, then start anew.
+                -- (stop_client is async; starting before exit can re-attach to the
+                -- dying client or race its root.)
+                local tries = 0
+                local timer = assert((vim.uv or vim.loop).new_timer())
+                timer:start(40, 40, vim.schedule_wrap(function()
+                    tries = tries + 1
+                    local alive = false
+                    for _, id in ipairs(old_ids) do
+                        if vim.lsp.get_client_by_id(id) then
+                            alive = true
+                            break
+                        end
+                    end
+                    if not alive or tries > 50 then -- cap ~2s
+                        timer:stop()
+                        timer:close()
+                        start_fresh()
+                    end
+                end))
             end
         end)
     end, {})
