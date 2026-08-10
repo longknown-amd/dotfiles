@@ -1,14 +1,25 @@
 # AMD LLM Gateway Configuration
 # Configured by AMD.ADE
 
-model = "gpt-5.5"
+model = "gpt-5.6-sol"
 model_provider = "amd_gateway"
 model_reasoning_effort = "high"
 plan_mode_reasoning_effort = "high"
 
+# The baked-in model catalog marks the gpt-5.6 family (sol/terra/luna) as
+# tool_mode = "code_mode_only". That makes Codex emit `custom_tool_call`
+# items carrying a `namespace` field (code mode). The AMD gateway's Azure
+# Responses backend does NOT support that field at any api-version and rejects
+# the request: BadRequest "Unknown parameter: 'input[N].namespace'".
+# This override catalog nulls tool_mode for the gpt-5.6 family so Codex sends
+# flat function/shell tools instead. Regenerate after a Codex upgrade with:
+#   codex debug models > /tmp/c.json && \
+#   python3 -c "import json;d=json.load(open('/tmp/c.json'));[m.__setitem__('tool_mode',None) for m in d['models'] if m['tool_mode']=='code_mode_only'];json.dump(d,open('/home/thohuang/.codex/model_catalog_override.json','w'),indent=2)"
+model_catalog_json = "/home/thohuang/.codex/model_catalog_override.json"
+
 [model_providers.amd_gateway]
 name = "AMD LLM Gateway"
-base_url = "https://llm-api.amd.com/openai/gpt-5.5"
+base_url = "https://llm-api.amd.com/openai"
 wire_api = "responses"
 query_params = { api-version = "2025-04-01-preview" }
 http_headers = { "Ocp-Apim-Subscription-Key" = "a5f0a2713dec41b695578f0b10fef327" }
@@ -76,6 +87,21 @@ trust_level = "trusted"
 [projects."/home/thohuang/project/gaokao"]
 trust_level = "trusted"
 
+[projects."/home/thohuang/project/hipNPIKernels"]
+trust_level = "trusted"
+
+[projects."/mnt/raid0/users/thohuang/project/insomina"]
+trust_level = "trusted"
+
+[projects."/mnt/raid0/users/thohuang/project/hipNPIKernels"]
+trust_level = "trusted"
+
+[projects."/mnt/raid0/users/thohuang/project/onemodel_magnus"]
+trust_level = "trusted"
+
+[projects."/mnt/raid0/users/thohuang/project/hipMicroBench"]
+trust_level = "trusted"
+
 [notice.model_migrations]
 gpt-5-codex = "gpt-5.3-codex"
 "gpt-5.3-codex" = "gpt-5.4"
@@ -85,6 +111,7 @@ home_last_prompted_at = 1782554182
 
 [tui.model_availability_nux]
 "gpt-5.5" = 4
+"gpt-5.6-sol" = 4
 
 [features]
 # AMD gateway's gpt-5-codex (2025-09-15) rejects Codex's hosted dynamic
@@ -122,7 +149,15 @@ approval_mode = "approve"
 enabled = true
 
 [marketplaces.claude-plugins-official]
-last_updated = "2026-06-29T01:45:26Z"
-last_revision = "3dc50d51835dc85f7a3f77d593dd9a565a87276b"
+last_updated = "2026-08-07T09:13:23Z"
+last_revision = "99dc284733dfbe91e778c123b091a4c0811d2ed2"
 source_type = "git"
 source = "https://github.com/anthropics/claude-plugins-official.git"
+
+[hooks.state]
+
+[hooks.state."/home/thohuang/.codex/hooks.json:user_prompt_submit:0:0"]
+trusted_hash = "sha256:ff11d5c8d6f667d3de5db7dba46d5c75a3fccd95181642b785a98d86ed0fe9a6"
+
+[hooks.state."/home/thohuang/.codex/hooks.json:user_prompt_submit:0:1"]
+trusted_hash = "sha256:1f16fcd54037ff0e3e2ed44c3d392428a8fa6826094806e2a5117e625e612912"
