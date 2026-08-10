@@ -1,0 +1,4 @@
+interface:
+  display_name: "Weekly Report Summarizer"
+  short_description: "Organize weekly progress by project and ASIC"
+  default_prompt: "Use $summarize-weekly-reports to turn my daily work notes into a weekly report grouped by project and ASIC."
