@@ -3,6 +3,10 @@ return {
     -- lazy.nvim's stub is removed before config() runs and the original
     -- invocation is replayed afterwards, so the wrapper below is what runs.
     cmd = "Unified",
+    keys = {
+        { "]h", function() require("unified.navigation").next_hunk() end, desc = "Unified: next hunk" },
+        { "[h", function() require("unified.navigation").previous_hunk() end, desc = "Unified: prev hunk" },
+    },
     config = function()
         require("unified").setup({})
 
