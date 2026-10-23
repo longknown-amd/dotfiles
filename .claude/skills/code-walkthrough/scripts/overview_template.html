@@ -1,0 +1,450 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>%%TITLE%%</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@highlightjs/cdn-assets@11.9.0/styles/github.min.css">
+<script src="https://cdn.jsdelivr.net/npm/@highlightjs/cdn-assets@11.9.0/highlight.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+%%EXTRA_HEAD%%
+<style>
+  :root {
+    --bg: #fafaf8; --card: #ffffff; --text: #24292f; --muted: #57606a; --line: #d0d7de;
+    --test: #2f6fde; --test-bg: #eaf1fd; --job: #d9822b; --job-bg: #fdf1e4;
+    --llm: #8250df; --llm-bg: #f3edfd; --ok: #1a7f37; --warn: #9a6700; --warn-bg: #fff8c5;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.6 -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  .layout { display: grid; grid-template-columns: 230px minmax(0, 1fr); max-width: 1500px; margin: 0 auto; }
+  nav.toc { position: sticky; top: 0; height: 100vh; overflow-y: auto; padding: 28px 16px; border-right: 1px solid var(--line); font-size: 13.5px; }
+  nav.toc a { display: block; color: var(--muted); text-decoration: none; padding: 4px 8px; border-radius: 6px; }
+  nav.toc a:hover { background: #eef0f2; color: var(--text); }
+  nav.toc .sub { padding-left: 20px; font-size: 13px; }
+  nav.toc .back { margin-bottom: 14px; color: var(--test); }
+  main { padding: 28px 40px 80px; min-width: 0; }
+  h1 { font-size: 30px; margin: 0 0 4px; }
+  h2 { font-size: 22px; margin: 48px 0 12px; padding-bottom: 6px; border-bottom: 1px solid var(--line); scroll-margin-top: 16px; }
+  h3 { font-size: 17px; margin: 28px 0 8px; scroll-margin-top: 16px; }
+  .subtitle { color: var(--muted); margin: 0 0 20px; }
+  code { font-family: var(--mono); font-size: 0.88em; background: #eff1f3; padding: 0.1em 0.35em; border-radius: 4px; }
+  pre { margin: 0; }
+  pre > code, pre > code.hljs { display: block; font-size: 12.5px; line-height: 1.5; padding: 12px 14px; border: 1px solid var(--line); border-radius: 8px; background: #f6f8fa; overflow-x: auto; white-space: pre; max-width: 100%; }
+  .codecap { font-family: var(--mono); font-size: 12px; color: var(--muted); margin: 10px 0 4px; }
+  .codecap b { color: var(--text); font-weight: 600; }
+  table { border-collapse: collapse; width: auto; margin: 10px 0 16px; font-size: 14px; background: var(--card); }
+  th, td { border: 1px solid var(--line); padding: 6px 10px; text-align: left; vertical-align: top; }
+  th { background: #f6f8fa; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 16px 20px; margin: 14px 0; }
+  .tldr { border-left: 4px solid var(--test); }
+  .callout { border-left: 4px solid var(--warn); background: var(--warn-bg); border-radius: 6px; padding: 10px 14px; margin: 12px 0; }
+  .pill { display: inline-block; font-size: 12px; font-weight: 600; padding: 1px 8px; border-radius: 999px; margin-right: 4px; }
+  .pill.test { background: var(--test-bg); color: var(--test); }
+  .pill.job  { background: var(--job-bg);  color: var(--job); }
+  .pill.llm  { background: var(--llm-bg);  color: var(--llm); }
+  .pill.det  { background: #e6f4ea; color: var(--ok); }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin: 16px 0; }
+  .stat { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+  .stat .n { font-size: 24px; font-weight: 700; }
+  .stat .l { font-size: 13px; color: var(--muted); }
+
+  /* ---------- walkthrough player ---------- */
+  .player { display: grid; grid-template-columns: minmax(340px, 0.9fr) minmax(0, 1.1fr); gap: 20px; align-items: start; }
+  .diagram-pane { position: sticky; top: 12px; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 10px; }
+  .diagram-pane .hint { font-size: 12px; color: var(--muted); text-align: center; margin-top: 4px; }
+  .scenarios { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0 14px; }
+  .scenarios button { border: 1px solid var(--line); background: var(--card); padding: 7px 12px; border-radius: 8px; cursor: pointer; font-size: 13.5px; }
+  .scenarios button.on { border-color: var(--text); background: var(--text); color: #fff; }
+  .step-card { min-width: 0; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 16px 20px; min-height: 420px; }
+  .step-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+  .step-count { font-size: 12px; color: var(--muted); font-family: var(--mono); }
+  .step-card h3 { margin: 6px 0 8px; }
+  .step-card .plain { font-size: 15px; }
+  .step-card .plain ul { margin: 6px 0; padding-left: 20px; }
+  .controls { display: flex; gap: 8px; align-items: center; margin-top: 14px; }
+  .controls button { border: 1px solid var(--line); background: var(--card); border-radius: 8px; padding: 6px 14px; cursor: pointer; font-size: 14px; }
+  .controls button:disabled { opacity: 0.4; cursor: default; }
+  .controls button.primary { background: var(--test); color: #fff; border-color: var(--test); }
+  .dots { display: flex; gap: 5px; margin-left: auto; }
+  .dots span { width: 9px; height: 9px; border-radius: 50%; background: var(--line); cursor: pointer; }
+  .dots span.on { background: var(--text); }
+  .mermaid-host svg { max-width: 100%; height: auto; }
+  #main-diagram svg { display: block; margin: 0 auto; max-height: calc(100vh - 70px); width: auto !important; }
+  .mermaid-host g.node { cursor: pointer; transition: opacity 0.25s; }
+  .mermaid-host.focus g.node { opacity: 0.35; }
+  .mermaid-host.focus g.node.visited { opacity: 0.7; }
+  .mermaid-host.focus g.node.active { opacity: 1; }
+  .mermaid-host g.node.active rect, .mermaid-host g.node.active polygon,
+  .mermaid-host g.node.active path, .mermaid-host g.node.active circle { stroke: #111 !important; stroke-width: 3px !important; }
+  .mermaid-host g.node.active { filter: drop-shadow(0 0 6px rgba(47,111,222,0.55)); }
+
+  /* ---------- log truncation chart ---------- */
+  .logbar { display: flex; height: 34px; border-radius: 6px; overflow: hidden; border: 1px solid var(--line); font-size: 12px; font-family: var(--mono); margin: 8px 0 4px; }
+  .logbar div { display: flex; align-items: center; justify-content: center; color: #fff; white-space: nowrap; }
+  .logbar .head { background: #6e7781; flex: 0 0 18%; }
+  .logbar .mid  { background: repeating-linear-gradient(45deg, #eee, #eee 6px, #ddd 6px, #ddd 12px); color: var(--muted); flex: 1; position: relative; }
+  .logbar .tail { background: #6e7781; flex: 0 0 9%; }
+  .logmarks { position: relative; height: 34px; font-size: 12px; font-family: var(--mono); }
+  .logmarks span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+  .logmarks span::before { content: "▲"; display: block; text-align: center; }
+  .side-by-side { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 1100px) {
+    .layout { grid-template-columns: 1fr; } nav.toc { display: none; }
+    .player, .side-by-side { grid-template-columns: 1fr; } .diagram-pane { position: static; }
+    main { padding: 20px; }
+  }
+  .walk { display:inline-flex; align-items:center; gap:6px; margin:2px 0 10px; padding:5px 12px; border:1px solid var(--test); border-radius:8px; color:var(--test); text-decoration:none; font-size:13.5px; font-weight:600; background:var(--test-bg); }
+  .walk:hover { background:var(--test); color:#fff; }
+  .walk small { font-weight:400; opacity:.85; }
+  /* ---- big picture ---- */
+  .bigpic { display:block; } .bigpic .mermaid-host { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:10px; margin-bottom:10px; } .bigpic .mermaid-host svg { display:block; margin:0 auto; max-width:1100px; width:100%; height:auto; }
+  .bigpic ul { margin:0; padding-left:18px; } .bigpic li { margin:.35em 0; }
+  /* ---- replay player ---- */
+  .rp-tabs { display:flex; gap:8px; margin:8px 0 12px; flex-wrap:wrap; }
+  .rp-tabs button { border:1px solid var(--line); background:var(--card); padding:7px 12px; border-radius:8px; cursor:pointer; font-size:13.5px; }
+  .rp-tabs button.on { border-color:var(--text); background:var(--text); color:#fff; }
+  .rp { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px 16px; margin:10px 0 18px; }
+  .rp-head b { font-size:16px; } .rp-head span { color:var(--muted); font-size:13.5px; margin-left:8px; }
+  .rp-grid { display:grid; grid-template-columns:minmax(0,1fr) 260px; gap:12px; margin-top:10px; }
+  .rp-diag { border:1px solid var(--line); border-radius:8px; padding:6px; margin-top:10px; display:flex; justify-content:center; }
+  .rp-diag svg { width:100%; max-width:1150px; height:auto; }
+  .rp-logtitle { font-size:12px; color:var(--muted); margin-bottom:4px; font-family:var(--mono); }
+  .rp-log { height:380px; overflow:auto; border:1px solid var(--line); border-radius:8px; background:#0d1117; color:#c9d1d9; font:12px/19px var(--mono); padding:6px 0; position:relative; }
+  .rl { display:flex; gap:10px; padding:0 10px; white-space:pre; transition:background .4s, opacity .4s; }
+  .rl .g { color:#6e7681; min-width:34px; text-align:right; user-select:none; flex:none; }
+  .rl .t { flex:none; }
+  .rl.gap { color:#6e7681; font-style:italic; }
+  .rl.hl { background:#3b2f0b; color:#ffe9a6; animation:rpflash .9s ease both; }
+  .rl.dim { opacity:.45; }
+  .rl .tag { margin-left:10px; flex:none; font-size:11px; font-weight:700; color:#0d1117; background:#f0b72f; border-radius:999px; padding:0 8px; animation:rpin .5s ease both; }
+  @keyframes rpflash { 0% { background:#f0b72f; color:#0d1117; } 100% { background:#3b2f0b; color:#ffe9a6; } }
+  @keyframes rpin { from { opacity:0; transform:translateX(-8px); } to { opacity:1; transform:none; } }
+  .rp-state { border:1px solid var(--line); border-radius:8px; padding:8px 12px; font-size:13px; background:#fbfbfa; overflow:auto; max-height:400px; }
+  .rp-state .h { font-weight:600; margin-bottom:4px; }
+  .rp-state dl { margin:0; } .rp-state dt { color:var(--muted); font-size:11.5px; margin-top:6px; }
+  .rp-state dd { margin:0; font-family:var(--mono); font-size:12.5px; word-break:break-word; }
+  .rp-state .new { animation:rpnew 1.2s ease both; border-radius:4px; }
+  @keyframes rpnew { 0% { background:#ffe58f; } 100% { background:transparent; } }
+  .rp-cap { margin-top:12px; min-height:52px; font-size:15.5px; line-height:1.55; transition:opacity .18s; }
+  .rp-ctl { display:flex; align-items:center; gap:8px; margin-top:8px; flex-wrap:wrap; }
+  .rp-ctl button { border:1px solid var(--line); background:var(--card); border-radius:8px; padding:5px 12px; cursor:pointer; font-size:14px; }
+  .rp-ctl button.play { background:var(--test); border-color:var(--test); color:#fff; min-width:92px; }
+  .rp-ticks { display:flex; gap:4px; flex:1; min-width:160px; }
+  .rp-ticks span { flex:1; height:6px; border-radius:3px; background:var(--line); cursor:pointer; transition:background .3s; }
+  .rp-ticks span.done { background:#9ab8ef; } .rp-ticks span.on { background:var(--test); }
+  .rp-ctl select { border:1px solid var(--line); border-radius:8px; padding:4px; }
+  .rp-ctl a.code { font-size:13px; color:var(--test); text-decoration:none; border:1px solid var(--test); border-radius:8px; padding:4px 10px; background:var(--test-bg); }
+  .rp-note { margin-top:10px; font-size:12.5px; color:var(--muted); }
+  /* ---- quiz ---- */
+  .qz { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:12px 16px; margin:10px 0; }
+  .qq { font-weight:600; margin-bottom:8px; } .qn { font-family:var(--mono); color:var(--test); margin-right:4px; }
+  .qo { display:flex; flex-wrap:wrap; gap:8px; }
+  .qo button { border:1px solid var(--line); background:#fff; border-radius:8px; padding:6px 12px; cursor:pointer; font-size:14px; text-align:left; }
+  .qo button:hover:not(:disabled) { border-color:var(--test); }
+  .qo button.right { background:#e6f4ea; border-color:#1a7f37; color:#0b3d1a; }
+  .qo button.wrong { background:#ffebe9; border-color:#cf222e; color:#6e0b14; }
+  .qw { display:none; margin-top:10px; font-size:14px; } .qw.on { display:block; } .qw a { color:var(--test); }
+  @media (max-width:1100px) { .bigpic, .rp-grid, .rp-grid.nodiag { grid-template-columns:1fr; } }
+  details > summary { cursor: pointer; font-weight: 600; }
+  .footer { margin-top: 60px; color: var(--muted); font-size: 13px; }
+</style>
+</head>
+<body>
+<div class="layout">
+<nav class="toc">
+%%NAV%%
+</nav>
+
+<main>
+<h1>%%H1%%</h1>
+<p class="subtitle">%%SUBTITLE%%</p>
+%%SECTIONS%%
+<p class="footer">%%FOOTER%%</p>
+</main>
+</div>
+
+<script id="page-data" type="application/json">%%DATA%%</script>
+<script>
+const PAGE = JSON.parse(document.getElementById('page-data').textContent);
+const DIAGRAMS = PAGE.diagrams || {};
+const SCENARIOS = PAGE.scenarios || {};
+const OV_QUIZ = PAGE.quiz || [];
+function esc(s) { return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+function codeBlock(code, lang) {
+  const el = document.createElement("pre");
+  const c = document.createElement("code");
+  c.className = "language-" + (lang || "plaintext");
+  c.textContent = code;
+  el.appendChild(c);
+  if (window.hljs) hljs.highlightElement(c);
+  return el;
+}
+
+let scenarioKey = "A", stepIdx = 0, nodeEls = {};
+
+function renderScenarioButtons() {
+  const host = document.getElementById("scenarios");
+  host.innerHTML = "";
+  for (const [key, sc] of Object.entries(SCENARIOS)) {
+    const b = document.createElement("button");
+    b.textContent = sc.label;
+    if (key === scenarioKey) b.className = "on";
+    b.onclick = () => { scenarioKey = key; stepIdx = 0; renderScenarioButtons(); renderStep(); };
+    host.appendChild(b);
+  }
+}
+
+function renderStep() {
+  const sc = SCENARIOS[scenarioKey], st = sc.steps[stepIdx], n = sc.steps.length;
+  const card = document.getElementById("step-card");
+  card.innerHTML = `
+    <div class="step-head"><span class="step-count">${sc.label} · step ${stepIdx + 1} / ${n}</span></div>
+    <h3>${st.title}</h3>
+    <div class="plain">${st.plain}</div>
+    <div class="codecap"><b>${PAGE.github ? `<a href="${PAGE.github}/blob/${PAGE.commit}/${st.path}#L${st.start}-L${st.end}" target="_blank" rel="noopener">${esc(st.file)}</a>` : esc(st.file)}</b></div>
+    <div class="codeslot"></div>
+    <div class="controls">
+      <button id="prev" ${stepIdx === 0 ? "disabled" : ""}>← Prev</button>
+      <button id="next" class="primary" ${stepIdx === n - 1 ? "disabled" : ""}>Next →</button>
+      <div class="dots">${sc.steps.map((_, i) => `<span data-i="${i}" class="${i === stepIdx ? "on" : ""}" title="${esc(sc.steps[i].title)}"></span>`).join("")}</div>
+    </div>`;
+  card.querySelector(".codeslot").appendChild(codeBlock(st.code, st.lang));
+  card.querySelector("#prev").onclick = () => go(stepIdx - 1);
+  card.querySelector("#next").onclick = () => go(stepIdx + 1);
+  card.querySelectorAll(".dots span").forEach(d => d.onclick = () => go(+d.dataset.i));
+  highlight();
+}
+
+function go(i) {
+  const n = SCENARIOS[scenarioKey].steps.length;
+  if (i < 0 || i >= n) return;
+  stepIdx = i; renderStep();
+}
+
+function highlight() {
+  const steps = SCENARIOS[scenarioKey].steps;
+  const visited = new Set(steps.slice(0, stepIdx).map(s => s.node));
+  const onPath = new Set(steps.map(s => s.node));
+  for (const [id, el] of Object.entries(nodeEls)) {
+    el.classList.toggle("active", id === steps[stepIdx].node);
+    el.classList.toggle("visited", visited.has(id));
+    el.style.opacity = onPath.has(id) ? "" : "0.15";
+  }
+}
+
+function nodeClick(id) {
+  const steps = SCENARIOS[scenarioKey].steps;
+  let i = steps.findIndex(s => s.node === id);
+  if (i < 0) {   // node not on this scenario: switch to one that has it
+    for (const [k, sc] of Object.entries(SCENARIOS)) {
+      const j = sc.steps.findIndex(s => s.node === id);
+      if (j >= 0) { scenarioKey = k; renderScenarioButtons(); i = j; break; }
+    }
+  }
+  if (i >= 0) go(i);
+}
+
+async function renderDiagram(host, key, idx) {
+  const { svg } = await mermaid.render("mmd-" + key + "-" + idx, DIAGRAMS[key]);
+  host.innerHTML = svg;
+  return host;
+}
+
+document.addEventListener("keydown", e => {
+  if (e.target.closest && e.target.closest("input,textarea")) return;
+  if (e.key === "ArrowRight") go(stepIdx + 1);
+  if (e.key === "ArrowLeft") go(stepIdx - 1);
+});
+
+/* ===================== replay player ===================== */
+let rpSeq = 0;
+class ReplayPlayer {
+  constructor(host, r, withDiagram) {
+    this.r = r; this.i = -1; this.timer = null; this.speed = 1; this.nodeEls = {};
+    host.innerHTML = '';
+    const root = document.createElement('div'); root.className = 'rp';
+    root.innerHTML = `
+      <div class="rp-head"><b>${r.title}</b><span>${r.subtitle}</span></div>
+      ${withDiagram ? '<div class="rp-diag mermaid-host focus"></div>' : ''}
+      <div class="rp-grid">
+        <div><div class="rp-logtitle"></div><div class="rp-log"></div></div>
+        <div class="rp-state"><div class="h">Result so far</div><dl></dl></div>
+      </div>
+      <div class="rp-cap"></div>
+      <div class="rp-ctl">
+        <button class="rs" title="restart">⏮</button><button class="pv" title="previous step">◀</button>
+        <button class="play">▶ Play</button><button class="nx" title="next step">▶|</button>
+        <div class="rp-ticks"></div>
+        <select title="speed"><option value="0.6">0.6×</option><option value="1" selected>1×</option><option value="1.6">1.6×</option></select>
+        <a class="code" target="_self">code →</a>
+      </div>
+      <div class="rp-note">${r.note || ''}</div>`;
+    host.appendChild(root);
+    this.$ = sel => root.querySelector(sel);
+    this.ticks = r.frames.map((_, k) => { const t = document.createElement('span'); t.onclick = () => { this.pause(); this.go(k); }; this.$('.rp-ticks').appendChild(t); return t; });
+    this.$('.rs').onclick = () => { this.pause(); this.go(0); };
+    this.$('.pv').onclick = () => { this.pause(); this.go(Math.max(0, this.i - 1)); };
+    this.$('.nx').onclick = () => { this.pause(); this.go(Math.min(r.frames.length - 1, this.i + 1)); };
+    this.$('.play').onclick = () => this.timer ? this.pause() : this.play();
+    this.$('select').onchange = e => { this.speed = +e.target.value; if (this.timer) { this.pause(); this.play(); } };
+    if (withDiagram) this.drawDiagram();
+    this.go(0);
+  }
+  async drawDiagram() {
+    const { svg } = await mermaid.render('rp-mmd-' + (rpSeq++), DIAGRAMS[PAGE.walk_diagram].replace('flowchart TD', 'flowchart LR'));
+    const d = this.$('.rp-diag'); d.innerHTML = svg;
+    d.querySelectorAll('g.node').forEach(g => { const m = (g.id || '').match(/flowchart-([A-Za-z0-9_]+)-\d+$/); if (m) this.nodeEls[m[1]] = g; });
+    this.paintNodes();
+  }
+  setLog(title, lines) {
+    if (this.curLog === lines) return;
+    this.curLog = lines; this.rows = {};
+    this.$('.rp-logtitle').textContent = title;
+    const box = this.$('.rp-log'); box.innerHTML = '';
+    let prev = null;
+    for (const [n, t] of lines) {
+      if (prev !== null && n > prev + 1) {
+        const g = document.createElement('div'); g.className = 'rl gap';
+        g.innerHTML = `<span class="g">⋮</span><span class="t">${n - prev - 1} lines not shown</span>`; box.appendChild(g);
+      }
+      const row = document.createElement('div'); row.className = 'rl';
+      row.innerHTML = `<span class="g">${n}</span><span class="t"></span>`;
+      row.querySelector('.t').textContent = t;
+      box.appendChild(row); this.rows[n] = row; prev = n;
+    }
+  }
+  state(k) {   // cumulative state after frames 0..k
+    const st = { set: {}, tags: {}, logTitle: this.r.log_title, log: this.r.log };
+    for (let j = 0; j <= k; j++) {
+      const f = this.r.frames[j];
+      if (f.swap) { st.log = f.swap.log; st.logTitle = f.swap.title; st.tags = {}; }
+      Object.assign(st.set, f.set || {}); Object.assign(st.tags, f.tags || {});
+    }
+    return st;
+  }
+  go(k) {
+    const f = this.r.frames[k], st = this.state(k), prevSet = this.i >= 0 && k > this.i ? this.state(this.i).set : null;
+    this.i = k;
+    this.setLog(st.logTitle, st.log);
+    Object.values(this.rows).forEach(r => { r.classList.remove('hl'); r.style.animationDelay = ''; const t = r.querySelector('.tag'); if (t) t.remove(); });
+    (f.hl || []).forEach((n, idx) => { const r = this.rows[n]; if (r) { r.classList.add('hl'); r.style.animationDelay = Math.min(idx * 70, 900) + 'ms'; } });
+    for (const [n, label] of Object.entries(st.tags)) { const r = this.rows[n]; if (r) { const t = document.createElement('span'); t.className = 'tag'; t.textContent = label; r.appendChild(t); } }
+    const fr = this.rows[f.focus];
+    if (fr) this.scrollLog(fr.offsetTop - this.$('.rp-log').clientHeight * 0.35);
+    const dl = this.$('.rp-state dl'); dl.innerHTML = '';
+    for (const [key, v] of Object.entries(st.set)) {
+      const isNew = !prevSet || prevSet[key] !== v ? (prevSet ? ' class="new"' : '') : '';
+      dl.insertAdjacentHTML('beforeend', `<dt>${key}</dt><dd${isNew}>${v}</dd>`);
+    }
+    const nw = dl.querySelector('.new'); if (nw) nw.scrollIntoView({ block: 'nearest' });
+    const cap = this.$('.rp-cap'); cap.style.opacity = 0;
+    setTimeout(() => { cap.innerHTML = `<b>${k + 1}/${this.r.frames.length}</b> · ${f.caption}`; cap.style.opacity = 1; }, 160);
+    const code = this.$('a.code');
+    if (f.code) { code.href = f.code; code.style.visibility = 'visible'; } else code.style.visibility = 'hidden';
+    this.ticks.forEach((t, j) => { t.className = j < k ? 'done' : j === k ? 'on' : ''; });
+    this.paintNodes();
+  }
+  scrollLog(target) {
+    const box = this.$('.rp-log'), from = box.scrollTop, to = Math.max(0, target), t0 = performance.now(), dur = 650;
+    cancelAnimationFrame(this.raf);
+    const step = now => {
+      const k = Math.min(1, (now - t0) / dur), e = k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+      box.scrollTop = from + (to - from) * e;
+      if (k < 1) this.raf = requestAnimationFrame(step);
+    };
+    this.raf = requestAnimationFrame(step);
+  }
+  paintNodes() {
+    const frames = this.r.frames, cur = frames[this.i] && frames[this.i].node;
+    const seen = new Set(frames.slice(0, this.i).map(f => f.node));
+    const onPath = new Set(frames.map(f => f.node));
+    for (const [id, g] of Object.entries(this.nodeEls)) {
+      g.classList.toggle('active', id === cur); g.classList.toggle('visited', seen.has(id));
+      g.style.opacity = onPath.has(id) ? '' : '0.15';
+    }
+  }
+  play() {
+    if (this.i >= this.r.frames.length - 1) this.go(0);
+    this.$('.play').textContent = '⏸ Pause';
+    const tick = () => {
+      const f = this.r.frames[this.i];
+      const ms = Math.max(3200, 1400 + (f.caption || '').replace(/<[^>]+>/g, '').length * 32) / this.speed;
+      this.timer = setTimeout(() => {
+        if (this.i >= this.r.frames.length - 1) return this.pause();
+        this.go(this.i + 1); tick();
+      }, ms);
+    };
+    tick();
+  }
+  pause() { clearTimeout(this.timer); this.timer = null; this.$('.play').textContent = '▶ Play'; }
+}
+
+/* ===================== quiz ===================== */
+function renderQuiz(host, items) {
+  items.forEach((it, qi) => {
+    const q = document.createElement('div'); q.className = 'qz';
+    q.innerHTML = `<div class="qq"><span class="qn">Q${qi + 1}</span> ${it.q}</div><div class="qo"></div><div class="qw"></div>`;
+    const opts = q.querySelector('.qo'), why = q.querySelector('.qw');
+    it.options.forEach((o, oi) => {
+      const b = document.createElement('button'); b.innerHTML = o;
+      b.onclick = () => {
+        opts.querySelectorAll('button').forEach((x, xi) => { x.disabled = true; if (xi === it.answer) x.classList.add('right'); });
+        if (oi !== it.answer) b.classList.add('wrong');
+        why.innerHTML = `<b>${oi === it.answer ? 'Correct.' : 'Not quite.'}</b> ${it.why} <a href="${it.link}">${it.linkText} →</a>`;
+        why.classList.add('on');
+      };
+      opts.appendChild(b);
+    });
+    host.appendChild(q);
+  });
+}
+window.addEventListener("DOMContentLoaded", async () => {
+  if (window.hljs) document.querySelectorAll('pre > code[class^="language-"]').forEach(c => hljs.highlightElement(c));
+  mermaid.initialize({ startOnLoad: false, theme: "base", securityLevel: "strict",
+    flowchart: { curve: "basis", htmlLabels: true, nodeSpacing: 30, rankSpacing: 28 },
+    themeVariables: { fontFamily: "-apple-system, Segoe UI, Roboto, sans-serif", fontSize: "13px" } });
+
+  const walkHost = document.getElementById("main-diagram");
+  if (walkHost && Object.keys(SCENARIOS).length) {
+    scenarioKey = Object.keys(SCENARIOS)[0];
+    const main = await renderDiagram(walkHost, PAGE.walk_diagram, 0);
+    main.querySelectorAll("g.node").forEach(g => {
+      const m = (g.id || "").match(/flowchart-([A-Za-z0-9_]+)-\d+$/);
+      if (!m) return;
+      nodeEls[m[1]] = g;
+      g.addEventListener("click", () => nodeClick(m[1]));
+    });
+    renderScenarioButtons();
+    renderStep();
+  }
+  let i = 1;
+  for (const host of document.querySelectorAll(".mermaid-host[data-diagram]")) {
+    await renderDiagram(host, host.dataset.diagram, i++);
+  }
+  const quizHost = document.getElementById('ov-quiz');
+  if (quizHost && OV_QUIZ.length) renderQuiz(quizHost, OV_QUIZ);
+  if (window.REPLAYS) {
+    const byId = Object.fromEntries(REPLAYS.map(r => [r.id, r]));
+    const tabs = document.getElementById('rp-tabs'), mainHost = document.getElementById('rp-main');
+    if (tabs && mainHost && (PAGE.replay_tabs || []).length) {
+      let player = null;
+      const show = id => {
+        if (player) player.pause();
+        tabs.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.id === id));
+        player = new ReplayPlayer(mainHost, byId[id], true);
+      };
+      PAGE.replay_tabs.filter(t => byId[t.id]).forEach(t => {
+        const b = document.createElement('button'); b.dataset.id = t.id; b.textContent = t.label;
+        b.onclick = () => show(t.id); tabs.appendChild(b);
+      });
+      show(PAGE.replay_tabs.find(t => byId[t.id]).id);
+    }
+    document.querySelectorAll('.replay-host[data-replay]').forEach(h => {
+      if (byId[h.dataset.replay]) new ReplayPlayer(h, byId[h.dataset.replay], h.dataset.diagram === '1');
+    });
+  }
+});
+</script>
+</body>
+</html>

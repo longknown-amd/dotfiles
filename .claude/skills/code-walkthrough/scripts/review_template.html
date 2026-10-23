@@ -1,0 +1,401 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>%%TITLE%%</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@highlightjs/cdn-assets@11.9.0/styles/github.min.css">
+<script src="https://cdn.jsdelivr.net/npm/@highlightjs/cdn-assets@11.9.0/highlight.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<style>
+  :root { --bg:#fafaf8; --card:#fff; --text:#24292f; --muted:#57606a; --line:#d0d7de; --accent:#2f6fde;
+          --add:#e6ffec; --add-strong:#abf2bc; --del:#ffebe9; --del-strong:#ffc1bc; --hl:#fff4c2;
+          --mono: ui-monospace,"SF Mono",Menlo,Consolas,monospace; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:15px/1.6 -apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; }
+  .layout { display:grid; grid-template-columns:290px minmax(0,1fr); max-width:1750px; margin:0 auto; }
+  nav.toc { position:sticky; top:0; height:100vh; overflow-y:auto; padding:22px 14px; border-right:1px solid var(--line); font-size:13px; }
+  nav.toc a { display:block; color:var(--muted); text-decoration:none; padding:3px 8px; border-radius:6px; }
+  nav.toc a:hover { background:#eef0f2; color:var(--text); }
+  nav.toc .sec { font-weight:600; color:var(--text); margin-top:10px; }
+  nav.toc .ent { padding-left:16px; display:flex; gap:6px; }
+  nav.toc .ent .dots { margin-left:auto; white-space:nowrap; }
+  nav.toc .pages { margin-top:20px; border-top:1px solid var(--line); padding-top:10px; }
+  nav.toc .pages a.cur { color:var(--text); font-weight:600; background:#eef0f2; }
+  nav.toc a.here { background:#eef0f2; color:var(--text); }
+  main { padding:22px 34px 80px; min-width:0; }
+  .crumb a { color:var(--accent); text-decoration:none; font-size:13.5px; }
+  h1 { font-size:26px; margin:4px 0; }
+  h2 { font-size:20px; margin:34px 0 8px; padding-bottom:6px; border-bottom:1px solid var(--line); }
+  .meta { color:var(--muted); font-size:13px; margin-bottom:12px; }
+  code { font-family:var(--mono); font-size:.88em; background:#eff1f3; padding:.1em .35em; border-radius:4px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:14px 18px; margin:12px 0; }
+  .summary { border-left:4px solid var(--accent); }
+  .why { border-left:4px solid #8250df; }
+  .map { position:relative; }
+  .map svg { max-width:100%; height:auto; display:block; margin:0 auto; }
+  .legend { font-size:12.5px; color:var(--muted); }
+  .badge { display:inline-block; font-size:11.5px; font-weight:700; border-radius:999px; padding:0 8px; margin-right:4px; }
+  .b-risk { background:#ffebe9; color:#a40e26; } .b-question { background:#fff8c5; color:#7d4e00; }
+  .b-nit { background:#eef0f2; color:#57606a; } .b-good { background:#dafbe1; color:#116329; } .b-test { background:#ddf4ff; color:#0550ae; }
+  .b-added { background:#dafbe1; color:#116329; } .b-modified { background:#fff8c5; color:#7d4e00; } .b-deleted { background:#ffebe9; color:#a40e26; }
+  /* ---- hunk card ---- */
+  .hunk { background:var(--card); border:1px solid var(--line); border-radius:10px; margin:16px 0; scroll-margin-top:10px; }
+  .hhead { display:flex; justify-content:space-between; gap:12px; align-items:baseline; padding:9px 14px; background:#f6f8fa; border-bottom:1px solid var(--line); border-radius:10px 10px 0 0; flex-wrap:wrap; }
+  .hhead .t { font-weight:600; } .hhead .n { color:var(--muted); font-family:var(--mono); font-size:12px; margin-right:6px; }
+  .hhead .f { font-family:var(--mono); font-size:12px; color:var(--muted); }
+  .hhead .f a { color:var(--accent); text-decoration:none; }
+  .hhead .stat { font-family:var(--mono); font-size:12px; } .stat .a { color:#1a7f37; } .stat .d { color:#cf222e; }
+  .hbody { display:grid; grid-template-columns:minmax(0,1.45fr) minmax(300px,1fr); }
+  .diffcol { min-width:0; overflow-x:auto; border-right:1px solid var(--line); }
+  .ctxline { font-family:var(--mono); font-size:12px; color:#6e7781; background:#f1f8ff; padding:3px 12px; border-bottom:1px solid #ddf4ff; white-space:pre; }
+  table.diff { border-collapse:collapse; font:12.5px/19px var(--mono); min-width:100%; }
+  table.diff td { padding:0 8px; white-space:pre; vertical-align:top; }
+  table.diff td.ln { color:#8c959f; text-align:right; user-select:none; min-width:42px; padding:0 6px; }
+  table.diff td.sg { user-select:none; width:14px; padding:0 2px; color:#6e7781; }
+  tr.add td { background:var(--add); } tr.add td.ln { background:#ccffd8; }
+  tr.del td { background:var(--del); } tr.del td.ln { background:#ffd7d5; }
+  tr.add .wd { background:var(--add-strong); border-radius:2px; } tr.del .wd { background:var(--del-strong); border-radius:2px; }
+  tr.key td.code { box-shadow:inset 3px 0 0 #d4a72c; }
+  tr.fold td { background:#f6f8fa; color:var(--accent); cursor:pointer; text-align:center; font-family:inherit; font-size:12px; }
+  .side { padding:12px 16px; font-size:14.5px; overflow-wrap:anywhere; min-width:0; }
+  .side .stick { position:sticky; top:10px; }
+  .side p { margin:.4em 0 .6em; } .side ul { padding-left:20px; margin:.3em 0; }
+  .notes { margin-top:10px; border-top:1px dashed var(--line); padding-top:8px; }
+  .note { margin:6px 0; font-size:14px; }
+  .checklist li { margin:.3em 0; }
+  .pager { display:flex; justify-content:space-between; gap:10px; margin-top:36px; }
+  .pager a { flex:1; background:var(--card); border:1px solid var(--line); border-radius:10px; padding:12px 16px; text-decoration:none; color:var(--text); }
+  .pager a small { display:block; color:var(--muted); } .pager a.next { text-align:right; }
+  .filter { display:flex; gap:6px; flex-wrap:wrap; margin:8px 0; font-size:13px; }
+  .filter button { border:1px solid var(--line); background:#fff; border-radius:999px; padding:2px 10px; cursor:pointer; }
+  .filter button.on { background:var(--text); color:#fff; border-color:var(--text); }
+  /* ---- call map <-> blocks ---- */
+  .map { position:relative; }
+  .map g.node { cursor:pointer; }
+  .map g.node:hover rect { stroke-width:2.5px !important; }
+  .map g.node.here rect { stroke:#d9822b !important; stroke-width:3px !important; }
+  .map g.node.sel rect { stroke:#111 !important; stroke-width:3px !important; }
+  .map g.node small { color:#8c959f; font-family:var(--mono); font-size:11px; }
+  .ncard { position:absolute; z-index:20; width:380px; max-width:calc(100% - 20px); background:#fff; border:1px solid var(--line); border-radius:10px; box-shadow:0 10px 28px rgba(0,0,0,.16); padding:12px 14px 14px; font-size:13.5px; line-height:1.5; }
+  .ncard .x { position:absolute; top:6px; right:10px; cursor:pointer; color:var(--muted); font-size:18px; }
+  .ncard h4 { margin:0 22px 2px 0; font-family:var(--mono); font-size:14px; word-break:break-all; }
+  .ncard .def { font-family:var(--mono); font-size:12px; }
+  .ncard .def a { color:var(--accent); text-decoration:none; }
+  .ncard .role { margin:6px 0 8px; }
+  .ncard .rel { font-size:12.5px; color:var(--muted); margin:2px 0; }
+  .ncard .rel a, .ncard .blks a { color:var(--accent); cursor:pointer; text-decoration:none; font-family:var(--mono); font-size:12px; }
+  .ncard .blks { margin:8px 0; }
+  .ncard .blks a { display:block; padding:1px 0; }
+  .ncard .ctxnote { color:var(--muted); font-style:italic; margin:8px 0 0; }
+  .ncard button { margin-top:6px; background:var(--accent); color:#fff; border:0; border-radius:8px; padding:6px 14px; cursor:pointer; font-size:13.5px; }
+  .chip { margin-left:8px; font-size:12px; font-family:var(--mono); color:#5a2f00; background:#fdf1e4; border:1px solid #f0c99a; border-radius:999px; padding:0 8px; cursor:pointer; white-space:nowrap; }
+  .chip:hover { background:#f9dfbf; }
+  main.focusing .hunk:not(.infocus) { opacity:.28; }
+  main.focusing .gap { opacity:.28; }
+  .hunk.infocus { border-color:var(--accent); box-shadow:0 0 0 2px rgba(47,111,222,.25); }
+  .focusbar { position:fixed; top:10px; left:50%; transform:translateX(-50%); z-index:30; background:#24292f; color:#fff; border-radius:999px; padding:5px 8px 5px 16px; display:none; gap:6px; align-items:center; font-size:13.5px; box-shadow:0 6px 18px rgba(0,0,0,.25); }
+  .focusbar.on { display:flex; }
+  .focusbar b { font-family:var(--mono); font-weight:600; }
+  .focusbar button { background:#3d444d; color:#fff; border:0; border-radius:999px; padding:3px 10px; cursor:pointer; }
+  .focusbar button:disabled { opacity:.35; cursor:default; }
+  nav.toc .mini { position:sticky; top:-24px; background:var(--bg); padding:8px 0 8px; margin:0 0 8px; border-bottom:1px solid var(--line); z-index:2; }
+  nav.toc .mini .h { font-weight:600; padding:0 8px 4px; color:var(--text); }
+  nav.toc .mini .mi { display:flex; gap:6px; padding:1px 8px; border-radius:6px; cursor:pointer; font-family:var(--mono); font-size:11.5px; color:var(--muted); white-space:nowrap; }
+  nav.toc .mini .mi .nm { overflow:hidden; text-overflow:ellipsis; }
+  nav.toc .mini .mi .bn { margin-left:auto; color:#8c959f; font-size:10.5px; }
+  nav.toc .mini .mi:hover { background:#eef0f2; color:var(--text); }
+  nav.toc .mini .mi.here { background:#fdf1e4; color:#5a2f00; font-weight:600; }
+  nav.toc .mini .mi.ctx { font-style:italic; opacity:.65; }
+  nav.toc a.ent.here { background:#eef0f2; color:var(--text); }
+  @media (max-width:1150px) { .layout{grid-template-columns:1fr} nav.toc{display:none} .hbody{grid-template-columns:1fr} .diffcol{border-right:none;border-bottom:1px solid var(--line)} main{padding:16px} }
+</style>
+</head>
+<body>
+<div class="layout"><nav class="toc" id="toc"></nav><main id="main"></main></div>
+<script id="data" type="application/json">%%DATA%%</script>
+<script>
+const D = JSON.parse(document.getElementById('data').textContent);
+const T = D.theme;
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const el = (tag, attrs, html) => { const e = document.createElement(tag); for (const [k,v] of Object.entries(attrs||{})) e.setAttribute(k,v); if (html!=null) e.innerHTML = html; return e; };
+const NI = T.node_info || {};
+const BLOCK_TITLES = T.entries.map(e => e.title);
+const mapNodeEls = {};
+let focusState = null;
+const STATUS_LABEL = { new: 'new', changed: 'changed', context: 'context' };
+const KIND = { risk: 'risk', question: 'question', nit: 'nit', good: 'looks good', test: 'test' };
+const FOLD_AT = 60, FOLD_SHOW = 40;
+
+function hl(text, lang) {
+  if (!window.hljs || lang === 'plaintext') return esc(text);
+  try { return hljs.highlight(text, { language: lang, ignoreIllegals: true }).value; } catch (e) { return esc(text); }
+}
+
+// Word-level change marks for a paired -/+ line: highlight the differing middle.
+function wordMark(a, b) {
+  let p = 0; while (p < a.length && p < b.length && a[p] === b[p]) p++;
+  let s = 0; while (s < a.length - p && s < b.length - p && a[a.length-1-s] === b[b.length-1-s]) s++;
+  return [[p, a.length - s], [p, b.length - s]];
+}
+function markedHtml(text, range, lang) {
+  if (!range || range[0] >= range[1]) return hl(text, lang);
+  return hl(text.slice(0, range[0]), lang) + '<span class="wd">' + hl(text.slice(range[0], range[1]), lang) + '</span>' + hl(text.slice(range[1]), lang);
+}
+
+function diffTable(e) {
+  const rows = e.rows, keys = new Set(e.highlight || []);
+  // pair consecutive '-' runs with following '+' runs for word marks
+  const marks = new Array(rows.length).fill(null);
+  for (let i = 0; i < rows.length;) {
+    if (rows[i][0] !== '-') { i++; continue; }
+    let j = i; while (j < rows.length && rows[j][0] === '-') j++;
+    let k = j; while (k < rows.length && rows[k][0] === '+') k++;
+    const n = Math.min(j - i, k - j);
+    if (n === j - i && n === k - j) for (let m = 0; m < n; m++) { const [x, y] = wordMark(rows[i+m][3], rows[j+m][3]); marks[i+m] = x; marks[j+m] = y; }
+    i = k;
+  }
+  const tbl = el('table', { class: 'diff' });
+  const mk = (r, idx) => {
+    const [tag, o, n, text] = r;
+    const tr = el('tr', { class: tag === '+' ? 'add' : tag === '-' ? 'del' : 'ctx' });
+    if (n != null && keys.has(n)) tr.classList.add('key');
+    tr.innerHTML = `<td class="ln">${o ?? ''}</td><td class="ln">${n ?? ''}</td><td class="sg">${tag === ' ' ? '' : tag}</td><td class="code">${markedHtml(text, marks[idx], e.lang)}</td>`;
+    return tr;
+  };
+  const long = rows.length > FOLD_AT && !e.expanded;
+  rows.forEach((r, i) => { const tr = mk(r, i); if (long && i >= FOLD_SHOW) tr.style.display = 'none'; tbl.appendChild(tr); });
+  if (long) {
+    const f = el('tr', { class: 'fold' }, `<td colspan="4">▾ show ${rows.length - FOLD_SHOW} more lines</td>`);
+    f.onclick = () => { tbl.querySelectorAll('tr').forEach(t => t.style.display = ''); f.remove(); };
+    tbl.appendChild(f);
+  }
+  return tbl;
+}
+
+/* ---------- mini-map: the call tree, pinned in the sidebar ---------- */
+function renderMiniMap() {
+  const box = el('div', { class: 'mini' }, '<div class="h">Change map · you are here</div>');
+  const ids = Object.keys(NI);
+  const roots = ids.filter(id => !NI[id].called_by.length);
+  const seen = new Set();
+  const visit = (id, depth) => {
+    if (seen.has(id)) return;
+    seen.add(id);
+    const n = NI[id];
+    const nb = n.blocks.length ? n.blocks.map(x => '#' + x).join(' ') : '—';
+    const item = el('div', { class: 'mi' + (n.blocks.length ? '' : ' ctx'), 'data-node': id, title: n.role || n.label },
+      `<span class="nm" style="padding-left:${depth * 12}px">${depth ? '└ ' : ''}${esc(n.label)}</span><span class="bn">${nb}</span>`);
+    item.addEventListener('click', () => n.blocks.length ? startFocus(id, 0) : openCard(id, true));
+    box.appendChild(item);
+    n.calls.forEach(c => visit(c, depth + 1));
+  };
+  (roots.length ? roots : [ids[0]]).forEach(r => visit(r, 0));
+  ids.forEach(id => visit(id, 0));   // anything only reachable through a cycle
+  return box;
+}
+
+/* ---------- info card on a map box ---------- */
+function closeCard() {
+  document.querySelectorAll('.ncard').forEach(c => c.remove());
+  Object.values(mapNodeEls).forEach(g => g.classList.remove('sel'));
+}
+
+function openCard(nid, scroll) {
+  const n = NI[nid], map = document.getElementById('map'), g = mapNodeEls[nid];
+  if (!n || !map) return;
+  if (scroll) map.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  closeCard();
+  if (g) g.classList.add('sel');
+  const [file, line] = (n.def || "").split(/:(?=\d+$)/);
+  const defHtml = n.def ? (D.github
+    ? `<a href="${D.github}/blob/${D.head_ref}/${file}#L${line}" target="_blank" rel="noopener">${esc(n.def)}</a>`
+    : esc(n.def)) : '';
+  const rel = (label, list) => list.length
+    ? `<div class="rel">${label} ${list.map(x => `<a data-go="${x}">${esc(NI[x].label)}</a>`).join(', ')}</div>` : '';
+  const blocks = n.blocks.map(i => `<a data-block="${i}">#${i} · ${esc(BLOCK_TITLES[i - 1])}</a>`).join('');
+  const card = el('div', { class: 'ncard' }, `
+    <span class="x" title="close (Esc)">×</span>
+    <h4>${esc(n.label)}</h4>
+    <div class="def">${defHtml}</div>
+    <div class="role">${esc(n.role || '')}</div>
+    ${rel('calls →', n.calls)}${rel('called by ←', n.called_by)}
+    ${n.blocks.length
+      ? `<div class="blks">${blocks}</div><button>Read ${n.blocks.length > 1 ? `these ${n.blocks.length} changes` : 'this change'} →</button>`
+      : n.elsewhere ? `<div class="ctxnote">Changed on another theme page: <a href="${n.elsewhere[0]}.html#h${n.elsewhere[1]}">${esc(n.elsewhere[2])} · change #${n.elsewhere[1]} →</a></div>`
+      : `<div class="ctxnote">Context only: unchanged by this commit; shown for orientation. Open the definition above to read it.</div>`}`);
+  map.appendChild(card);
+  // place the card under the clicked box, kept inside the map frame
+  const mr = map.getBoundingClientRect();
+  let left = 12, top = 40;
+  if (g) {
+    const r = g.getBoundingClientRect();
+    left = Math.min(Math.max(8, r.left - mr.left), mr.width - card.offsetWidth - 8);
+    top = r.bottom - mr.top + 8;
+  }
+  card.style.left = left + 'px'; card.style.top = top + 'px';
+  card.querySelector('.x').onclick = closeCard;
+  card.querySelectorAll('[data-go]').forEach(a => a.onclick = () => openCard(a.dataset.go));
+  card.querySelectorAll('[data-block]').forEach(a => a.onclick = () => startFocus(nid, n.blocks.indexOf(+a.dataset.block)));
+  const btn = card.querySelector('button');
+  if (btn) btn.onclick = () => startFocus(nid, 0);
+}
+
+/* ---------- focus mode: walk one function's blocks ---------- */
+function startFocus(nid, i) {
+  closeCard();
+  const blocks = NI[nid].blocks;
+  focusState = { nid, blocks, i: Math.max(0, i) };
+  const main = document.getElementById('main');
+  main.classList.add('focusing');
+  document.querySelectorAll('.hunk').forEach(b => b.classList.toggle('infocus', (b.dataset.nodes || '').split(' ').includes(nid)));
+  stepFocus(0);
+}
+
+function stepFocus(delta) {
+  const f = focusState;
+  if (!f) return;
+  f.i = Math.min(f.blocks.length - 1, Math.max(0, f.i + delta));
+  const bar = document.getElementById('focusbar');
+  bar.classList.add('on');
+  bar.querySelector('.lbl').innerHTML = `<b>${esc(NI[f.nid].label)}</b> · change ${f.i + 1}/${f.blocks.length} (#${f.blocks[f.i]})`;
+  bar.querySelector('.prev').disabled = f.i === 0;
+  bar.querySelector('.next').disabled = f.i === f.blocks.length - 1;
+  document.getElementById('h' + f.blocks[f.i]).scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function endFocus() {
+  focusState = null;
+  document.getElementById('main').classList.remove('focusing');
+  document.querySelectorAll('.block.infocus').forEach(b => b.classList.remove('infocus'));
+  document.getElementById('focusbar').classList.remove('on');
+}
+
+
+function hunkCard(e, idx) {
+  const card = el('section', { class: 'hunk', id: `h${idx}` });
+  const first = e.rows.find(r => r[2] != null), last = [...e.rows].reverse().find(r => r[2] != null);
+  const range = first && last ? `${first[2]}-${last[2]}` : '';
+  const link = D.github && D.head_ref && range ? `<a href="${D.github}/blob/${D.head_ref}/${e.file}#L${first[2]}-L${last[2]}" target="_blank" rel="noopener">${esc(e.file)}:${range}</a>` : esc(e.file);
+  const kinds = [...new Set((e.notes || []).map(n => n.kind))].map(k => `<span class="badge b-${k}">${KIND[k]}</span>`).join('');
+  card.dataset.kinds = (e.notes || []).map(n => n.kind).join(' ');
+  card.dataset.node = e.node || '';
+  card.dataset.nodes = (e.nodes || [e.node || '']).join(' ');
+  const ni = NI[e.node];
+  const chip = ni ? `<span class="chip" data-node="${e.node}" title="Show this function in the change map">● ${esc(ni.label)}${e.part && e.part[1] > 1 ? ` · part ${e.part[0]}/${e.part[1]}` : ''}${(e.nodes || []).length > 1 ? ` +${e.nodes.length - 1} more` : ''}</span>` : '';
+  card.appendChild(el('div', { class: 'hhead' },
+    `<div><span class="n">#${idx}</span><span class="t">${esc(e.title)}</span> ${kinds}${chip}</div>
+     <div class="f">${e.fstatus !== 'modified' ? `<span class="badge b-${e.fstatus}">${e.fstatus}</span>` : ''}${link} <span class="stat"><span class="a">+${e.adds}</span> <span class="d">−${e.dels}</span></span></div>`));
+  const body = el('div', { class: 'hbody' });
+  const col = el('div', { class: 'diffcol' });
+  if (e.context) col.appendChild(el('div', { class: 'ctxline' }, esc('@@ ' + e.context)));
+  col.appendChild(diffTable(e));
+  const side = el('div', { class: 'side' });
+  const notes = (e.notes || []).map(n => `<div class="note"><span class="badge b-${n.kind}">${KIND[n.kind]}</span> ${n.text}</div>`).join('');
+  side.appendChild(el('div', { class: 'stick' }, (e.explain || '') + (notes ? `<div class="notes">${notes}</div>` : '')));
+  body.appendChild(col); body.appendChild(side);
+  card.appendChild(body);
+  const chipEl = card.querySelector('.chip');
+  if (chipEl) chipEl.addEventListener('click', () => {
+    document.getElementById('map').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setTimeout(() => openCard(e.node), 350);
+  });
+  return card;
+}
+
+function render() {
+  const main = document.getElementById('main'), toc = document.getElementById('toc');
+  const m = D.meta;
+  main.appendChild(el('div', { class: 'crumb' }, `<a href="${D.parent}">← ${esc(D.parent_title)}</a>`));
+  main.appendChild(el('h1', {}, esc(T.title)));
+  const src = m.sha ? `commit <code>${esc(m.sha.slice(0, 10))}</code> by ${esc(m.author)} (${esc(m.date)}): “${esc(m.subject)}”` : `<code>${esc(m.label)}</code> (${esc(m.base)} → ${esc(m.head)})`;
+  const adds = T.entries.reduce((s, e) => s + e.adds, 0), dels = T.entries.reduce((s, e) => s + e.dels, 0);
+  main.appendChild(el('div', { class: 'meta' }, `${src} · this theme: ${T.entries.length} changes, <span style="color:#1a7f37">+${adds}</span> <span style="color:#cf222e">−${dels}</span>. Diff text is rendered from <code>git diff</code>, not copied.`));
+  if (T.summary) main.appendChild(el('div', { class: 'card summary' }, '<b>What changes</b>' + T.summary));
+  if (T.why) main.appendChild(el('div', { class: 'card why' }, '<b>Why</b>' + T.why));
+  if (T.map) { const mm = el('div', { class: 'card map', id: 'map' }); main.appendChild(mm); }
+
+  const kinds = [...new Set(T.entries.flatMap(e => (e.notes || []).map(n => n.kind)))];
+  if (kinds.length) {
+    const f = el('div', { class: 'filter' }, '<span style="color:var(--muted)">Show:</span>');
+    const all = el('button', { class: 'on' }, 'all changes'); f.appendChild(all);
+    const btns = [all];
+    for (const k of ['risk', 'question', 'test', 'nit', 'good'].filter(k => kinds.includes(k))) {
+      const b = el('button', {}, `<span class="badge b-${k}">${KIND[k]}</span>`); b.dataset.k = k; f.appendChild(b); btns.push(b);
+    }
+    btns.forEach(b => b.onclick = () => {
+      btns.forEach(x => x.classList.toggle('on', x === b));
+      document.querySelectorAll('.hunk').forEach(h => h.style.display = !b.dataset.k || h.dataset.kinds.split(' ').includes(b.dataset.k) ? '' : 'none');
+    });
+    main.appendChild(f);
+  }
+
+  toc.appendChild(el('a', { href: D.parent }, '← Review overview'));
+  if (T.map) toc.appendChild(el('a', { href: '#map' }, 'Change map'));
+  if (Object.keys(NI).length) toc.appendChild(renderMiniMap());
+  toc.appendChild(el('a', { class: 'sec', href: '#changes' }, 'Changes'));
+  main.appendChild(el('h2', { id: 'changes' }, 'Changes, in reading order'));
+  let prevFile = null;
+  T.entries.forEach((e, i) => {
+    if (e.file !== prevFile) { main.appendChild(el('div', { class: 'meta', style: 'margin:18px 0 -8px;font-family:var(--mono)' }, '▸ ' + esc(e.file))); prevFile = e.file; }
+    main.appendChild(hunkCard(e, i + 1));
+    const dots = (e.notes || []).map(n => `<span class="badge b-${n.kind}" title="${KIND[n.kind]}">${n.kind[0].toUpperCase()}</span>`).join('');
+    toc.appendChild(el('a', { class: 'ent', href: `#h${i + 1}` }, `<span>${i + 1}. ${esc(e.title)}</span><span class="dots">${dots}</span>`));
+  });
+  if (T.checklist && T.checklist.length) {
+    main.appendChild(el('h2', { id: 'checklist' }, 'Reviewer checklist'));
+    main.appendChild(el('div', { class: 'card checklist' }, '<ul>' + T.checklist.map(c => `<li>☐ ${c}</li>`).join('') + '</ul>'));
+    toc.appendChild(el('a', { class: 'sec', href: '#checklist' }, 'Reviewer checklist'));
+  }
+  const sib = D.siblings, i = sib.findIndex(s => s.id === T.id);
+  const pages = el('div', { class: 'pages' }, '<div style="font-weight:600;padding:0 8px 4px">Themes</div>');
+  sib.forEach(s => pages.appendChild(el('a', { href: `${s.id}.html`, class: s.id === T.id ? 'cur' : '' }, esc(s.title))));
+  toc.appendChild(pages);
+  const pager = el('div', { class: 'pager' });
+  pager.appendChild(i > 0 ? el('a', { href: `${sib[i-1].id}.html` }, `<small>← previous theme</small>${esc(sib[i-1].title)}`) : el('span'));
+  pager.appendChild(i < sib.length - 1 ? el('a', { class: 'next', href: `${sib[i+1].id}.html` }, `<small>next theme →</small>${esc(sib[i+1].title)}`) : el('span'));
+  main.appendChild(pager);
+
+  const hunksEls = [...document.querySelectorAll('.hunk')], links = [...toc.querySelectorAll('a.ent')];
+  const mark = () => {
+    let cur = -1; hunksEls.forEach((h, k) => { if (h.getBoundingClientRect().top < innerHeight * 0.4) cur = k; });
+    links.forEach((a, k) => a.classList.toggle('here', k === cur));
+    const nid = cur >= 0 ? hunksEls[cur].dataset.node : null;
+    document.querySelectorAll('.mini .mi').forEach(m => m.classList.toggle('here', m.dataset.node === nid));
+    Object.entries(mapNodeEls).forEach(([id, g]) => g.classList.toggle('here', id === nid));
+  };
+  addEventListener('scroll', () => requestAnimationFrame(mark)); mark();
+}
+
+window.addEventListener('DOMContentLoaded', async () => {
+  const fb = el('div', { class: 'focusbar', id: 'focusbar' },
+    '<span class="lbl"></span><button class="prev">‹ prev</button><button class="next">next ›</button><button class="end" title="Esc">✕ show all</button>');
+  document.body.appendChild(fb);
+  fb.querySelector('.prev').onclick = () => stepFocus(-1);
+  fb.querySelector('.next').onclick = () => stepFocus(1);
+  fb.querySelector('.end').onclick = endFocus;
+  document.addEventListener('keydown', ev => {
+    if (ev.key === 'Escape') { closeCard(); endFocus(); }
+    if (focusState && ev.key === 'ArrowRight') stepFocus(1);
+    if (focusState && ev.key === 'ArrowLeft') stepFocus(-1);
+  });
+  render();
+  if (T.map && window.mermaid) {
+    mermaid.initialize({ startOnLoad: false, theme: 'base', securityLevel: 'strict', flowchart: { curve: 'basis', htmlLabels: true },
+      themeVariables: { fontFamily: '-apple-system, Segoe UI, Roboto, sans-serif', fontSize: '13px' } });
+    try { const { svg } = await mermaid.render('mmd-map', T.map); const m = document.getElementById('map');
+      m.innerHTML = svg + '<p class="legend">Change map: <span class="badge b-added">new</span> <span class="badge b-modified">changed</span> functions; dashed = unchanged context. <code>#n</code> = the changes below that touch it. <strong>Click a box</strong> for its role, callers and changes.</p>';
+      m.querySelectorAll('g.node').forEach(g => {
+        const mm = (g.id || '').match(/flowchart-([A-Za-z]\w*)-\d+$/);
+        if (!mm || !NI[mm[1]]) return;
+        mapNodeEls[mm[1]] = g;
+        g.addEventListener('click', ev => { ev.stopPropagation(); openCard(mm[1]); });
+      });
+      m.addEventListener('click', ev => { if (!ev.target.closest('.ncard')) closeCard(); }); }
+    catch (e) { document.getElementById('map').textContent = 'diagram error: ' + e.message; }
+  }
+  if (location.hash) { const t = document.querySelector(location.hash); if (t) t.scrollIntoView(); }
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,413 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>%%TITLE%%</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@highlightjs/cdn-assets@11.9.0/styles/github.min.css">
+<script src="https://cdn.jsdelivr.net/npm/@highlightjs/cdn-assets@11.9.0/highlight.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<style>
+  :root { --bg:#fafaf8; --card:#fff; --text:#24292f; --muted:#57606a; --line:#d0d7de; --accent:#2f6fde;
+          --hl:#fff4c2; --hover:#dbe9ff; --mono: ui-monospace,"SF Mono",Menlo,Consolas,monospace; --lh:20px; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:15px/1.6 -apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; }
+  .layout { display:grid; grid-template-columns:300px minmax(0,1fr); max-width:1700px; margin:0 auto; }
+  nav.toc { position:sticky; top:0; height:100vh; overflow-y:auto; padding:24px 14px; border-right:1px solid var(--line); font-size:13px; }
+  nav.toc a { display:block; color:var(--muted); text-decoration:none; padding:3px 8px; border-radius:6px; }
+  nav.toc a:hover { background:#eef0f2; color:var(--text); }
+  nav.toc .sec { font-weight:600; color:var(--text); margin-top:10px; }
+  nav.toc .blk { padding-left:18px; }
+  nav.toc .pages { margin-top:22px; border-top:1px solid var(--line); padding-top:10px; }
+  nav.toc .pages a.cur { color:var(--text); font-weight:600; background:#eef0f2; }
+  main { padding:24px 36px 80px; min-width:0; }
+  .crumb { font-size:13.5px; margin-bottom:6px; }
+  .crumb a { color:var(--accent); text-decoration:none; }
+  h1 { font-size:27px; margin:0 0 4px; }
+  h2 { font-size:20px; margin:40px 0 8px; padding-bottom:6px; border-bottom:1px solid var(--line); scroll-margin-top:12px; }
+  .meta { color:var(--muted); font-size:13px; margin-bottom:14px; }
+  code { font-family:var(--mono); font-size:.88em; background:#eff1f3; padding:.1em .35em; border-radius:4px; }
+  .summary, .map, .takeaways { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:14px 18px; margin:14px 0; }
+  .summary { border-left:4px solid var(--accent); }
+  .map svg { max-width:100%; height:auto; display:block; margin:0 auto; }
+  .legend { font-size:12.5px; color:var(--muted); margin:8px 0 0; }
+
+  .block { background:var(--card); border:1px solid var(--line); border-radius:10px; margin:16px 0; scroll-margin-top:12px; }
+  .bhead { display:flex; justify-content:space-between; align-items:baseline; gap:12px; padding:10px 16px; border-bottom:1px solid var(--line); background:#f6f8fa; border-radius:10px 10px 0 0; }
+  .bhead .t { font-weight:600; }
+  .bhead .n { color:var(--muted); font-size:12px; margin-right:6px; font-family:var(--mono); }
+  .bhead .f { font-family:var(--mono); font-size:12px; color:var(--muted); white-space:nowrap; }
+  .bhead .f a { color:var(--accent); text-decoration:none; }
+  .bbody { display:grid; grid-template-columns:minmax(0,1.35fr) minmax(280px,1fr); }
+  .codecol { min-width:0; border-right:1px solid var(--line); overflow-x:auto; }
+  .codewrap { position:relative; display:flex; font:12.5px/var(--lh) var(--mono); padding:10px 0; min-width:max-content; }
+  .gutter { position:relative; z-index:1; color:#8c959f; text-align:right; padding:0 10px 0 12px; user-select:none; white-space:pre; }
+  .src { white-space:pre; padding:0 16px 0 6px; position:relative; z-index:1; }
+  .src code.hljs, .src code { background:transparent !important; padding:0; font-size:inherit; display:block; }
+  .bar { position:absolute; left:0; right:0; height:var(--lh); z-index:0; pointer-events:none; }
+  .bar.key { background:var(--hl); }
+  .bar.hover { background:var(--hover); transition:opacity .15s; }
+  .explain { padding:12px 18px; font-size:14.5px; }
+  .explain .stick { position:sticky; top:12px; }
+  .explain p { margin:.4em 0 .6em; }
+  .explain ul, .explain ol { padding-left:20px; margin:.3em 0 .6em; }
+  .explain li { margin:.25em 0; }
+  .lref { color:var(--accent); cursor:pointer; border-bottom:1px dotted var(--accent); }
+  .gap { text-align:center; color:var(--muted); font-size:12.5px; font-family:var(--mono); margin:-6px 0; }
+  .pager { display:flex; justify-content:space-between; gap:10px; margin-top:40px; }
+  .pager a { flex:1; background:var(--card); border:1px solid var(--line); border-radius:10px; padding:12px 16px; text-decoration:none; color:var(--text); }
+  .pager a small { display:block; color:var(--muted); }
+  .pager a.next { text-align:right; }
+  /* ---- quiz ---- */
+  .qz { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:12px 16px; margin:10px 0; }
+  .qq { font-weight:600; margin-bottom:8px; }
+  .qn { font-family:var(--mono); color:var(--accent); margin-right:4px; }
+  .qo { display:flex; flex-wrap:wrap; gap:8px; }
+  .qo button { border:1px solid var(--line); background:#fff; border-radius:8px; padding:6px 12px; cursor:pointer; font-size:14px; text-align:left; }
+  .qo button:hover:not(:disabled) { border-color:var(--accent); }
+  .qo button.right { background:#e6f4ea; border-color:#1a7f37; color:#0b3d1a; }
+  .qo button.wrong { background:#ffebe9; border-color:#cf222e; color:#6e0b14; }
+  .qo button:disabled { cursor:default; }
+  .qw { display:none; margin-top:10px; font-size:14px; }
+  .qw.on { display:block; }
+  .qw a { color:var(--accent); }
+  /* ---- call map <-> blocks ---- */
+  .map { position:relative; }
+  .map g.node { cursor:pointer; }
+  .map g.node:hover rect { stroke-width:2.5px !important; }
+  .map g.node.here rect { stroke:#d9822b !important; stroke-width:3px !important; }
+  .map g.node.sel rect { stroke:#111 !important; stroke-width:3px !important; }
+  .map g.node small { color:#8c959f; font-family:var(--mono); font-size:11px; }
+  .ncard { position:absolute; z-index:20; width:380px; max-width:calc(100% - 20px); background:#fff; border:1px solid var(--line); border-radius:10px; box-shadow:0 10px 28px rgba(0,0,0,.16); padding:12px 14px 14px; font-size:13.5px; line-height:1.5; }
+  .ncard .x { position:absolute; top:6px; right:10px; cursor:pointer; color:var(--muted); font-size:18px; }
+  .ncard h4 { margin:0 22px 2px 0; font-family:var(--mono); font-size:14px; word-break:break-all; }
+  .ncard .def { font-family:var(--mono); font-size:12px; }
+  .ncard .def a { color:var(--accent); text-decoration:none; }
+  .ncard .role { margin:6px 0 8px; }
+  .ncard .rel { font-size:12.5px; color:var(--muted); margin:2px 0; }
+  .ncard .rel a, .ncard .blks a { color:var(--accent); cursor:pointer; text-decoration:none; font-family:var(--mono); font-size:12px; }
+  .ncard .blks { margin:8px 0; }
+  .ncard .blks a { display:block; padding:1px 0; }
+  .ncard .ctxnote { color:var(--muted); font-style:italic; margin:8px 0 0; }
+  .ncard button { margin-top:6px; background:var(--accent); color:#fff; border:0; border-radius:8px; padding:6px 14px; cursor:pointer; font-size:13.5px; }
+  .chip { margin-left:8px; font-size:12px; font-family:var(--mono); color:#5a2f00; background:#fdf1e4; border:1px solid #f0c99a; border-radius:999px; padding:0 8px; cursor:pointer; white-space:nowrap; }
+  .chip:hover { background:#f9dfbf; }
+  main.focusing .block:not(.infocus) { opacity:.28; }
+  main.focusing .gap { opacity:.28; }
+  .block.infocus { border-color:var(--accent); box-shadow:0 0 0 2px rgba(47,111,222,.25); }
+  .focusbar { position:fixed; top:10px; left:50%; transform:translateX(-50%); z-index:30; background:#24292f; color:#fff; border-radius:999px; padding:5px 8px 5px 16px; display:none; gap:6px; align-items:center; font-size:13.5px; box-shadow:0 6px 18px rgba(0,0,0,.25); }
+  .focusbar.on { display:flex; }
+  .focusbar b { font-family:var(--mono); font-weight:600; }
+  .focusbar button { background:#3d444d; color:#fff; border:0; border-radius:999px; padding:3px 10px; cursor:pointer; }
+  .focusbar button:disabled { opacity:.35; cursor:default; }
+  nav.toc .mini { position:sticky; top:-24px; background:var(--bg); padding:8px 0 8px; margin:0 0 8px; border-bottom:1px solid var(--line); z-index:2; }
+  nav.toc .mini .h { font-weight:600; padding:0 8px 4px; color:var(--text); }
+  nav.toc .mini .mi { display:flex; gap:6px; padding:1px 8px; border-radius:6px; cursor:pointer; font-family:var(--mono); font-size:11.5px; color:var(--muted); white-space:nowrap; }
+  nav.toc .mini .mi .nm { overflow:hidden; text-overflow:ellipsis; }
+  nav.toc .mini .mi .bn { margin-left:auto; color:#8c959f; font-size:10.5px; }
+  nav.toc .mini .mi:hover { background:#eef0f2; color:var(--text); }
+  nav.toc .mini .mi.here { background:#fdf1e4; color:#5a2f00; font-weight:600; }
+  nav.toc .mini .mi.ctx { font-style:italic; opacity:.65; }
+  nav.toc a.blk.here { background:#eef0f2; color:var(--text); }
+  @media (max-width:1150px) { .layout{grid-template-columns:1fr} nav.toc{display:none} .bbody{grid-template-columns:1fr} .codecol{border-right:none;border-bottom:1px solid var(--line)} main{padding:18px} }
+</style>
+</head>
+<body>
+<div class="layout">
+  <nav class="toc" id="toc"></nav>
+  <main id="main"></main>
+</div>
+<script id="data" type="application/json">%%DATA%%</script>
+<script>
+const D = JSON.parse(document.getElementById('data').textContent);
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const LH = 20;
+const NI = D.node_info || {};
+const BLOCK_TITLES = [];
+D.sections.forEach(sec => sec.blocks.forEach(b => BLOCK_TITLES.push(b.title)));
+const mapNodeEls = {};   // map id -> <g.node>
+let focusState = null;   // { nid, blocks, i }
+
+function el(tag, attrs, html) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) e.setAttribute(k, v);
+  if (html != null) e.innerHTML = html;
+  return e;
+}
+
+function renderBlock(b, idx) {
+  const id = `b${idx}`;
+  const range = `${b.file}:${b.start}-${b.end}`;
+  const gh = D.github ? `<a href="${D.github}/blob/${D.commit}/${b.file}#L${b.start}-L${b.end}" target="_blank" rel="noopener">${esc(range)}</a>` : esc(range);
+  const card = el('section', { class: 'block', id });
+  card.dataset.node = b.node || '';
+  const ni = NI[b.node];
+  const chip = ni ? `<span class="chip" data-node="${b.node}" title="Show this function in the call map">● ${esc(ni.label)}${b.part && b.part[1] > 1 ? ` · part ${b.part[0]}/${b.part[1]}` : ''}</span>` : '';
+  card.appendChild(el('div', { class: 'bhead' }, `<div><span class="n">#${idx}</span><span class="t">${esc(b.title)}</span>${chip}</div><div class="f">${gh}</div>`));
+  const chipEl = card.querySelector('.chip');
+  if (chipEl) chipEl.addEventListener('click', () => {
+    document.getElementById('map').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setTimeout(() => openCard(b.node), 350);
+  });
+  const body = el('div', { class: 'bbody' });
+
+  const col = el('div', { class: 'codecol' });
+  const wrap = el('div', { class: 'codewrap' });
+  const n = b.end - b.start + 1;
+  wrap.appendChild(el('div', { class: 'gutter' }, Array.from({ length: n }, (_, i) => b.start + i).join('\n')));
+  const src = el('div', { class: 'src' });
+  const code = el('code', { class: 'language-' + b.lang });
+  code.textContent = b.code;
+  src.appendChild(code);
+  if (window.hljs) hljs.highlightElement(code);
+  wrap.appendChild(src);
+  const top = ln => 10 + (ln - b.start) * LH;
+  for (const ln of b.highlight || []) {
+    const bar = el('div', { class: 'bar key' }); bar.style.top = top(ln) + 'px'; wrap.appendChild(bar);
+  }
+  const hover = el('div', { class: 'bar hover' }); hover.style.opacity = 0; wrap.appendChild(hover);
+  col.appendChild(wrap);
+
+  const ex = el('div', { class: 'explain' });
+  const stick = el('div', { class: 'stick' },
+    (b.explain || '').replace(/<strong>L(\d+)(?:\s*[-–]\s*L?(\d+))?<\/strong>/g, (m, a, z) =>
+      `<strong class="lref" data-line="${a}" data-end="${z || a}">${m.slice(8, -9)}</strong>`));
+  ex.appendChild(stick);
+  stick.querySelectorAll('.lref').forEach(r => {
+    const ln = +r.dataset.line, end = Math.max(ln, +r.dataset.end);
+    if (ln < b.start || end > b.end) { r.classList.remove('lref'); return; }
+    r.addEventListener('mouseenter', () => { hover.style.top = top(ln) + 'px'; hover.style.height = (end - ln + 1) * LH + 'px'; hover.style.opacity = 1; });
+    r.addEventListener('mouseleave', () => { hover.style.opacity = 0; });
+    r.addEventListener('click', () => { col.scrollTop = 0; wrap.scrollIntoView({ block: 'nearest' }); });
+  });
+  body.appendChild(col); body.appendChild(ex);
+  card.appendChild(body);
+  return card;
+}
+
+function render() {
+  const main = document.getElementById('main'), toc = document.getElementById('toc');
+  main.appendChild(el('div', { class: 'crumb' }, `<a href="${D.parent}#${D.back_anchor}">← ${esc(D.parent_title)}</a>`));
+  main.appendChild(el('h1', {}, esc(D.title)));
+  const gh = D.github ? ` · <a href="${D.github}/tree/${D.commit}" target="_blank" rel="noopener">browse on GitHub</a>` : '';
+  main.appendChild(el('div', { class: 'meta' }, `Code quoted verbatim from commit <code>${esc(D.commit)}</code>${gh}. Click a file range to open it on GitHub. Hover a <span class="lref">L123</span> reference to highlight that line; <span style="background:var(--hl);padding:0 4px">yellow</span> lines are the key ones.`));
+  main.appendChild(el('div', { class: 'summary' }, D.summary || ''));
+  if (D.map) {
+    const m = el('div', { class: 'map' }); m.id = 'map';
+    main.appendChild(m);
+  }
+
+  toc.appendChild(el('a', { href: `${D.parent}#${D.back_anchor}` }, '← Overview'));
+  if (D.map) toc.appendChild(el('a', { href: '#map' }, 'Call map'));
+  if (Object.keys(NI).length) toc.appendChild(renderMiniMap());
+  let idx = 0, prev = null;
+  D.sections.forEach((sec, si) => {
+    const h = el('h2', { id: `s${si}` }, esc(sec.heading));
+    main.appendChild(h);
+    toc.appendChild(el('a', { class: 'sec', href: `#s${si}` }, esc(sec.heading)));
+    if (sec.intro) main.appendChild(el('div', {}, sec.intro));
+    for (const b of sec.blocks) {
+      idx++;
+      if (prev && prev.file === b.file && b.start > prev.end + 1)
+        main.appendChild(el('div', { class: 'gap' }, `⋮ ${b.start - prev.end - 1} lines of ${esc(b.file.split('/').pop())} not shown`));
+      main.appendChild(renderBlock(b, idx));
+      toc.appendChild(el('a', { class: 'blk', href: `#b${idx}` }, `${idx}. ${esc(b.title)}`));
+      prev = b;
+    }
+  });
+  if (D.quiz && D.quiz.length) {
+    main.appendChild(el('h2', { id: 'quiz' }, 'Check yourself'));
+    main.appendChild(renderQuiz(D.quiz, i => `#b${i}`));
+    toc.appendChild(el('a', { class: 'sec', href: '#quiz' }, 'Check yourself'));
+  }
+  if (D.takeaways && D.takeaways.length) {
+    main.appendChild(el('h2', { id: 'takeaways' }, 'Takeaways'));
+    main.appendChild(el('div', { class: 'takeaways' }, '<ul>' + D.takeaways.map(t => `<li>${t}</li>`).join('') + '</ul>'));
+    toc.appendChild(el('a', { class: 'sec', href: '#takeaways' }, 'Takeaways'));
+  }
+
+  const sib = D.siblings || [], i = sib.findIndex(s => s.slug === D.slug);
+  const pages = el('div', { class: 'pages' }, '<div style="font-weight:600;padding:0 8px 4px">Other walkthroughs</div>');
+  sib.forEach(s => pages.appendChild(el('a', { href: `${s.slug}.html`, class: s.slug === D.slug ? 'cur' : '' }, esc(s.title.split(' — ')[0]))));
+  toc.appendChild(pages);
+  const pager = el('div', { class: 'pager' });
+  pager.appendChild(i > 0 ? el('a', { href: `${sib[i-1].slug}.html` }, `<small>← previous</small>${esc(sib[i-1].title.split(' — ')[0])}`) : el('span', {}));
+  pager.appendChild(i < sib.length - 1 ? el('a', { class: 'next', href: `${sib[i+1].slug}.html` }, `<small>next →</small>${esc(sib[i+1].title.split(' — ')[0])}`) : el('span', {}));
+  main.appendChild(pager);
+}
+
+/* ---------- quiz ---------- */
+function renderQuiz(items, blockHref) {
+  const box = el('div', { class: 'quiz' });
+  items.forEach((it, qi) => {
+    const q = el('div', { class: 'qz' }, `<div class="qq"><span class="qn">Q${qi + 1}</span> ${it.q}</div>`);
+    const opts = el('div', { class: 'qo' });
+    const why = el('div', { class: 'qw' });
+    it.options.forEach((o, oi) => {
+      const b = el('button', {}, o);
+      b.onclick = () => {
+        opts.querySelectorAll('button').forEach((x, xi) => {
+          x.disabled = true;
+          if (xi === it.answer) x.classList.add('right');
+        });
+        if (oi !== it.answer) b.classList.add('wrong');
+        why.innerHTML = `<b>${oi === it.answer ? 'Correct.' : 'Not quite.'}</b> ${it.why}` +
+          (it.block ? ` <a href="${blockHref(it.block)}">See block #${it.block} →</a>` : '');
+        why.classList.add('on');
+      };
+      opts.appendChild(b);
+    });
+    q.appendChild(opts); q.appendChild(why); box.appendChild(q);
+  });
+  return box;
+}
+
+/* ---------- mini-map: the call tree, pinned in the sidebar ---------- */
+function renderMiniMap() {
+  const box = el('div', { class: 'mini' }, '<div class="h">Call map · you are here</div>');
+  const ids = Object.keys(NI);
+  const roots = ids.filter(id => !NI[id].called_by.length);
+  const seen = new Set();
+  const visit = (id, depth) => {
+    if (seen.has(id)) return;
+    seen.add(id);
+    const n = NI[id];
+    const nb = n.blocks.length ? n.blocks.map(x => '#' + x).join(' ') : '—';
+    const item = el('div', { class: 'mi' + (n.blocks.length ? '' : ' ctx'), 'data-node': id, title: n.role || n.label },
+      `<span class="nm" style="padding-left:${depth * 12}px">${depth ? '└ ' : ''}${esc(n.label)}</span><span class="bn">${nb}</span>`);
+    item.addEventListener('click', () => n.blocks.length ? startFocus(id, 0) : openCard(id, true));
+    box.appendChild(item);
+    n.calls.forEach(c => visit(c, depth + 1));
+  };
+  (roots.length ? roots : [ids[0]]).forEach(r => visit(r, 0));
+  ids.forEach(id => visit(id, 0));   // anything only reachable through a cycle
+  return box;
+}
+
+/* ---------- info card on a map box ---------- */
+function closeCard() {
+  document.querySelectorAll('.ncard').forEach(c => c.remove());
+  Object.values(mapNodeEls).forEach(g => g.classList.remove('sel'));
+}
+
+function openCard(nid, scroll) {
+  const n = NI[nid], map = document.getElementById('map'), g = mapNodeEls[nid];
+  if (!n || !map) return;
+  if (scroll) map.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  closeCard();
+  if (g) g.classList.add('sel');
+  const [file, line] = (n.def || '').split(/:(?=\d+$)/);
+  const defHtml = n.def ? (D.github
+    ? `<a href="${D.github}/blob/${D.commit}/${file}#L${line}" target="_blank" rel="noopener">${esc(n.def)}</a>`
+    : esc(n.def)) : '';
+  const rel = (label, list) => list.length
+    ? `<div class="rel">${label} ${list.map(x => `<a data-go="${x}">${esc(NI[x].label)}</a>`).join(', ')}</div>` : '';
+  const blocks = n.blocks.map(i => `<a data-block="${i}">#${i} · ${esc(BLOCK_TITLES[i - 1])}</a>`).join('');
+  const card = el('div', { class: 'ncard' }, `
+    <span class="x" title="close (Esc)">×</span>
+    <h4>${esc(n.label)}</h4>
+    <div class="def">${defHtml}</div>
+    <div class="role">${esc(n.role || '')}</div>
+    ${rel('calls →', n.calls)}${rel('called by ←', n.called_by)}
+    ${n.blocks.length
+      ? `<div class="blks">${blocks}</div><button>Read ${n.blocks.length > 1 ? `these ${n.blocks.length} blocks` : 'this block'} →</button>`
+      : `<div class="ctxnote">Context only: no block on this page quotes this function. Open the definition above to read it.</div>`}`);
+  map.appendChild(card);
+  // place the card under the clicked box, kept inside the map frame
+  const mr = map.getBoundingClientRect();
+  let left = 12, top = 40;
+  if (g) {
+    const r = g.getBoundingClientRect();
+    left = Math.min(Math.max(8, r.left - mr.left), mr.width - card.offsetWidth - 8);
+    top = r.bottom - mr.top + 8;
+  }
+  card.style.left = left + 'px'; card.style.top = top + 'px';
+  card.querySelector('.x').onclick = closeCard;
+  card.querySelectorAll('[data-go]').forEach(a => a.onclick = () => openCard(a.dataset.go));
+  card.querySelectorAll('[data-block]').forEach(a => a.onclick = () => startFocus(nid, n.blocks.indexOf(+a.dataset.block)));
+  const btn = card.querySelector('button');
+  if (btn) btn.onclick = () => startFocus(nid, 0);
+}
+
+/* ---------- focus mode: walk one function's blocks ---------- */
+function startFocus(nid, i) {
+  closeCard();
+  const blocks = NI[nid].blocks;
+  focusState = { nid, blocks, i: Math.max(0, i) };
+  const main = document.getElementById('main');
+  main.classList.add('focusing');
+  document.querySelectorAll('.block').forEach(b => b.classList.toggle('infocus', b.dataset.node === nid));
+  stepFocus(0);
+}
+
+function stepFocus(delta) {
+  const f = focusState;
+  if (!f) return;
+  f.i = Math.min(f.blocks.length - 1, Math.max(0, f.i + delta));
+  const bar = document.getElementById('focusbar');
+  bar.classList.add('on');
+  bar.querySelector('.lbl').innerHTML = `<b>${esc(NI[f.nid].label)}</b> · block ${f.i + 1}/${f.blocks.length} (#${f.blocks[f.i]})`;
+  bar.querySelector('.prev').disabled = f.i === 0;
+  bar.querySelector('.next').disabled = f.i === f.blocks.length - 1;
+  document.getElementById('b' + f.blocks[f.i]).scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function endFocus() {
+  focusState = null;
+  document.getElementById('main').classList.remove('focusing');
+  document.querySelectorAll('.block.infocus').forEach(b => b.classList.remove('infocus'));
+  document.getElementById('focusbar').classList.remove('on');
+}
+
+/* ---------- "you are here": track the block on screen ---------- */
+function watchCurrentBlock() {
+  const blocks = [...document.querySelectorAll('.block')];
+  const mark = () => {
+    let cur = null;
+    for (const b of blocks) { if (b.getBoundingClientRect().top < window.innerHeight * 0.4) cur = b; else break; }
+    const nid = cur ? cur.dataset.node : null;
+    document.querySelectorAll('.mini .mi').forEach(m => m.classList.toggle('here', m.dataset.node === nid));
+    Object.entries(mapNodeEls).forEach(([id, g]) => g.classList.toggle('here', id === nid));
+    document.querySelectorAll('nav.toc a.blk').forEach(a => a.classList.toggle('here', cur && a.getAttribute('href') === '#' + cur.id));
+  };
+  let pending = false;
+  window.addEventListener('scroll', () => { if (!pending) { pending = true; requestAnimationFrame(() => { pending = false; mark(); }); } });
+  mark();
+}
+
+window.addEventListener('DOMContentLoaded', async () => {
+  const fb = el('div', { class: 'focusbar', id: 'focusbar' },
+    '<span class="lbl"></span><button class="prev">‹ prev</button><button class="next">next ›</button><button class="end" title="Esc">✕ show all</button>');
+  document.body.appendChild(fb);
+  fb.querySelector('.prev').onclick = () => stepFocus(-1);
+  fb.querySelector('.next').onclick = () => stepFocus(1);
+  fb.querySelector('.end').onclick = endFocus;
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { closeCard(); endFocus(); }
+    if (focusState && e.key === 'ArrowRight') stepFocus(1);
+    if (focusState && e.key === 'ArrowLeft') stepFocus(-1);
+  });
+  render();
+  if (D.map && window.mermaid) {
+    mermaid.initialize({ startOnLoad: false, theme: 'base', securityLevel: 'strict',
+      flowchart: { curve: 'basis', htmlLabels: true },
+      themeVariables: { fontFamily: '-apple-system, Segoe UI, Roboto, sans-serif', fontSize: '13px', primaryColor: '#eaf1fd', primaryBorderColor: '#2f6fde' } });
+    try {
+      const { svg } = await mermaid.render('mmd-map', D.map);
+      const m = document.getElementById('map');
+      m.innerHTML = svg + '<p class="legend">Call map of the functions on this page. <strong>Click a box</strong> for its role, callers and blocks; <code>#n</code> = the blocks below that quote it; dashed boxes are context only.</p>';
+      m.querySelectorAll('g.node').forEach(g => {
+        const mm = (g.id || '').match(/flowchart-([A-Za-z]\w*)-\d+$/);
+        if (!mm || !NI[mm[1]]) return;
+        mapNodeEls[mm[1]] = g;
+        g.addEventListener('click', ev => { ev.stopPropagation(); openCard(mm[1]); });
+      });
+      m.addEventListener('click', ev => { if (!ev.target.closest('.ncard')) closeCard(); });
+    } catch (e) { document.getElementById('map').textContent = 'diagram error: ' + e.message; }
+  }
+  watchCurrentBlock();
+  if (location.hash) { const t = document.querySelector(location.hash); if (t) t.scrollIntoView(); }
+});
+</script>
+</body>
+</html>
