@@ -13,6 +13,10 @@ STRUCTURE
    - 3-5 findings, each with a concrete number;
    - the decision or action you need from me.
    If I stop reading here, I should still have the answer.
+   For an explanation of code or a mechanism, open with "In short" instead:
+   what it does, why it exists, where it sits, 3-5 key facts. Then the big
+   picture, then the flow in execution order with one running example,
+   then gotchas and deep dives.
 2. Under the title, add one meta line: who it's for · status/date · scope.
 3. Order everything by importance: conclusion, supporting evidence, method,
    raw detail. Method, caveats, logs and traces go last, in an appendix or
@@ -55,6 +59,11 @@ HTML OUTPUT (if producing a page)
   text and 3:1 for chart marks.
 - Collapse appendices with <details>, each with a specific label and a
   short hint of what's inside.
+- Declare the doc type: <meta name="doc-type" content="report"> in the head
+  (markdown: <!-- doc-type: report --> as the first line). Types: report,
+  design, postmortem, howto, reference, explanation, hub.
+- Link colors: internal links blue (#1f6fc9, dark #5b9cec); external links
+  violet (#7e3fc4, dark #b79af2) with a trailing arrow.
 
 BEFORE YOU FINISH
 - Read only the title, the meta line, the answer block and the headings.

@@ -1,37 +1,44 @@
-# <!-- claim: the idea as a sentence, e.g. "The scheduler batches by GPU model because setup dominates runtime" -->
+<!-- doc-type: explanation -->
+# <!-- claim: what it does, as a sentence, e.g. "FLAT stores reach memory through seven stages; the TA adapter is the choke point" -->
 
-*<Audience> · <Status, YYYY-MM-DD> · <Scope: the question this page answers>*
+*<Audience> · <Status, YYYY-MM-DD> · <Scope: the code, mechanism or concept covered, with repo@commit if code>*
 
-!!! abstract "Answer"
-    <!-- 2-3 sentences: the short version of why. A reader who stops here has the idea -->
+!!! abstract "In short"
+    <!-- one sentence: what it does and why it exists -->
 
-## <!-- claim: why it is built this way -->
+    1. <!-- key fact about how it works, e.g. "Every FLAT op is split into one request per active lane" -->
+    2. <!-- key fact -->
+    3. <!-- key fact (3-5 in total) -->
 
-<!-- first sentence = the point; the reasoning, with one concrete example -->
+    **Where it sits:** <!-- the component it belongs to, what calls it, what it calls -->
 
-## <!-- claim: the background a reader needs -->
+## <!-- what happens end to end, e.g. "A store travels decode → issue → SQ → TA adapter → VCA" -->
 
-<!-- history, constraints, and terms defined on first use; link the reference page for facts -->
+<!-- the big picture: one diagram or a numbered flow; name the running example used in every later section -->
 
-## <!-- claim: what the choice costs, e.g. "Batching trades latency for throughput" -->
+## <!-- step 1 as a claim about what happens, e.g. "Decode marks the instruction as a VMEM write" -->
 
-<!-- trade-offs and alternatives; say when the other choice is better -->
+<!-- first sentence = what happens; then the minimal code at file:line@commit; explain the why, not each line -->
 
-| Choice | Gains | Costs |
-|---|---|---|
-| <!-- option --> | <!-- gain --> | <!-- cost --> |
+```cpp
+// file.cpp:123 @ <commit>
+```
 
-## <!-- claim: where the idea stops applying -->
+## <!-- step 2: what happens next -->
 
-<!-- limits, exceptions, open questions; say what is unknown -->
+<!-- follow the running example through the flow, in execution order -->
+
+## <!-- where it goes wrong or surprises people, e.g. "Requests stall when the FIFO is full" -->
+
+<!-- gotchas, edge cases, limits; say what is unknown -->
 
 ## Related
 
-<!-- link the how-to for doing it and the reference for details, by descriptive name -->
+<!-- the how-to for using it, the reference for exact fields, the source location; descriptive link names -->
 
 <details markdown="1">
-<summary>Full <!-- derivation, data or history --></summary>
+<summary>Full deep dive: <!-- e.g. the state machine, every field, the history --></summary>
 
-<!-- supporting detail that most readers skip -->
+<!-- detail most readers skip; glossary of terms at the end -->
 
 </details>

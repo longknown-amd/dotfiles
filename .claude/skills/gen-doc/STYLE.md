@@ -6,13 +6,19 @@ Readers scan: 79% skim and 16% read word by word (NN/g). A doc works when the an
 
 Pick one doc type and keep to it; mixing types makes each part worse (Diátaxis).
 
-- Reports, evaluations, design docs and postmortems open with an answer block (BLUF): verdict, 3-5 findings with numbers, the decision or action needed.
-- How-tos open with the goal in one line, then prerequisites, then steps.
-- References open with a one-line scope. Their structure mirrors the thing described (same fields, same order for every entry).
-- Explanations open with the question they answer, then the why, the background and the trade-offs.
+The reading rules (gist first, headings that say something, one idea per paragraph, two layers) apply to every type. What changes per type is the opening block, the order and the heading style:
+
+| Type | Opening block (first screen) | Order after it | Headings |
+|---|---|---|---|
+| report, design, postmortem | **Answer**: verdict, 3-5 findings with numbers, decision or action needed | By importance (inverted pyramid); method and raw data last | Claims: "Opus costs 2.2x for the same accuracy" |
+| explanation (code, mechanisms, concepts) | **In short**: what it does, why it exists, where it sits, 3-5 key facts | Big picture, then the flow in execution order with one running example, then gotchas, deep dives, glossary | What happens: "The TA adapter assembles one request per lane" |
+| howto | Goal in one line, then prerequisites | Numbered steps, conditions before actions, a verify step, troubleshooting | Tasks: "Pin the compiler wheel" |
+| reference | One-line scope | Mirrors the thing described; same fields in the same order for every entry | The item's name is fine: "`--budget`" |
+
+- Explanations of code cite the minimal snippet as `file:line@commit` and explain the why, not each line. Diagrams get a caption that says what to notice.
 - Draft the answer block first to fix the message, then rewrite it last so it matches the finished body; it always sits first. Aim for 5-15% of a long doc; in a one-page doc keep it to about 6 lines.
 - Put a meta line under the title: audience, status and date, scope. Readers use it to decide whether to continue.
-- Order content as an inverted pyramid: conclusion, support, niche detail.
+- Order reports as an inverted pyramid: conclusion, support, niche detail. Order explanations by the flow, after the big picture.
 - Support the governing claim with 2-4 non-overlapping arguments, each backed by data.
 - Open every paragraph with its point. Readers take in the first two words of each line (F-pattern).
 - Keep paragraphs to 10 lines at most and sections short.
@@ -82,15 +88,37 @@ Build pages with `scripts/build_html.py`, which inlines `assets/reader.css` into
 
 ## 6. Markdown specifics
 
-The site runs MkDocs 1.6 with the readthedocs theme. Extensions: tables, fenced_code, codehilite, `toc: permalink`, admonition and `md_in_html`. `pymdownx` is not installed, so `???` collapsibles do not work.
+The site is built by `tools/build_site.py` (Python-Markdown with tables, fenced_code, codehilite, toc, admonition and `md_in_html`). `pymdownx` is not installed, so `???` collapsibles do not work.
 
-- Start with `# Claim title`, then the meta line in italics: `*Audience · Status, date · Scope*`.
+- Make the first line `<!-- doc-type: TYPE -->`, then `# Claim title`, then the meta line in italics: `*Audience · Status, date · Scope*`.
 - Write the answer block as `!!! abstract "Answer"` with the body indented 4 spaces.
 - Collapse detail with `<details markdown="1"><summary>Full ...</summary>` ... `</details>`. Leave a blank line after `<summary>` and before `</details>` so Markdown renders inside.
 - Use `##` for sections and `###` for sub-parts; `toc` adds the permalinks.
 - Fence code with a language tag. Keep one command per block when readers will copy it.
 - Align numeric table columns with `---:`. Mark winners with bold plus ▲ since Markdown cells have no class.
-- Add the page to `mkdocs.yml` nav, with the file under `docs/<topic>/`.
+- Add the page to `tools/sections.yml`, with the file under `docs/<topic>/`.
+
+## 6a. Doc center format (enforced by the guard)
+
+- **Doc type.** Declare exactly one: report, design, postmortem, howto, reference, explanation, hub, personal or generated. Markdown: `<!-- doc-type: TYPE -->` as the first line. HTML: `<meta name="doc-type" content="TYPE">` in the head. `generated` and `personal` are valid only under the path prefixes in `tools/doc-types.txt`.
+- **Links.** The site colors internal links blue and external links violet with a ↗. Write plain links; do not style them. Standalone HTML gets the same colors from `reader.css`; add `class="ext"` to external links there.
+- **Layout.** The site pins a contents panel on the left and left-aligns the text column. Write real `##` headings, since the panel is built from them.
+- **Blocking** (`tools/doc_guard.py` rejects the push): missing or invalid doc type, no answer block before the 2nd heading (report, design, postmortem), no meta line, generic headings, tables wider than 7 columns, lists nested deeper than 2 levels, broken "section N" cross-references, figures without an action title.
+- **Advice** (`check_doc.py` warns, the push still passes): length, buzzwords and minimizers, paragraph size, bold density and the other lint findings.
+- Moving or renaming a page needs a line in `tools/redirects.txt`.
+
+## 6b. Color
+
+Readers need neutral text and color that means something. The site applies color; pages don't hand-set it.
+
+- Keep body text near-black on off-white (or the reverse in dark mode). Never color body text or use gradients.
+- One site accent (teal) marks identity and interaction: the site name, the active contents entry, focus rings.
+- Each section has one muted hue, shown only as wayfinding: the stripe under the bar, the breadcrumb pill, home cards and menu headings.
+- Callouts carry meaning by color plus icon and label: `abstract` (answer, in short) green, `note` blue, `tip` teal, `warning` amber, `danger` red, `example`/`question` purple. Use a few per page.
+- Code blocks get syntax colors from the site; declare the language on every fence (```` ```cpp ````, ```` ```bash ````, ```` ```text ```` for plain output).
+- In tables and charts, color highlights only the winner or exception, always with a second cue (▲, bold, label).
+- Every color meets contrast in both themes: 4.5:1 for text, 3:1 for marks. Never use red/green as the only difference.
+- Don't add inline `style="color:…"` or `<font>` in markdown; the checker flags it. Use a callout instead.
 
 ## 7. AI anti-patterns
 
@@ -109,7 +137,8 @@ The site runs MkDocs 1.6 with the readthedocs theme. Extensions: tables, fenced_
 
 ## 8. Pre-publish checklist
 
-- [ ] Doc type chosen; the structure matches it
+- [ ] Doc type chosen and declared; the structure matches it
+- [ ] `tools/doc_guard.py` passes
 - [ ] Title is a claim; meta line present
 - [ ] Answer block (or goal and scope line) appears in the first screen
 - [ ] Answer block has 3-5 findings with numbers and a stated decision or action

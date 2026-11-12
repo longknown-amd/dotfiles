@@ -1,3 +1,4 @@
+<!-- doc-type: postmortem -->
 # <!-- claim: what broke and why, e.g. "A full disk on db-3 stopped job scheduling for 2 h" -->
 
 *<Audience> · <Status: draft/final, YYYY-MM-DD> · <Scope: incident ID, systems, window>*

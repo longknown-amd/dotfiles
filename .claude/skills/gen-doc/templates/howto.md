@@ -1,3 +1,4 @@
+<!-- doc-type: howto -->
 # <!-- claim: the task, as a verb phrase, e.g. "Rotate the dashboard database password" -->
 
 *<Audience: who runs this> · <Status, YYYY-MM-DD> · <Scope: versions, systems>*

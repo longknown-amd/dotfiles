@@ -1,3 +1,4 @@
+<!-- doc-type: reference -->
 # <!-- name of the thing described, e.g. "Deep Debug HTTP API" -->
 
 *<Audience> · <Status, YYYY-MM-DD> · <Version or commit covered>*

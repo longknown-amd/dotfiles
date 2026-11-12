@@ -1,3 +1,4 @@
+<!-- doc-type: report -->
 # <!-- claim: the answer as a sentence, e.g. "Use X by default, Y for hard cases" -->
 
 *<Audience> · <Status, YYYY-MM-DD> · <Scope: what was measured, how many cases>*

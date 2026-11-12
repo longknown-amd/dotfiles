@@ -23,6 +23,9 @@ or the repo by the builders, and every claim cites code or is marked unverified.
 The method follows the C4 zoom levels (system → component → code), code-reading.org's "map first, trace one
 real path, confirm with real data", CodeTour-style `file:line` stops, and mermaidiff-style evidence per claim.
 
+Page text follows the doc-center reading rules in `~/.claude/skills/gen-doc/STYLE.md` (explanation type: an "In short"
+opening, headings that say what happens, one running example, two disclosure layers). Keep the two in step.
+
 ## Hard rules
 
 1. **Never hand-copy code or diffs into a page.** Code enters only as `(file, start, end)` at a pinned commit, and

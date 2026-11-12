@@ -434,6 +434,11 @@ def find_lint(d, src_text):
         for line, ok in d.figures:
             if not ok:
                 add("info", "chart-title", "figure without .chart-title", f"line {line}")
+    # inline colors in content: color is the site's job (accent, section hue, callouts); hand-set colors drift
+    n_inline = len(re.findall(r'style="[^"]*(?<![-\w])(?:color|background(?:-color)?)\s*:', src_text))
+    n_font = len(re.findall(r'<font\b', src_text, flags=re.I))
+    if n_inline + n_font and d.kind == "md":
+        add("info", "inline-color", f"{n_inline + n_font} inline color style(s); use a callout or the site palette instead")
     return F
 
 

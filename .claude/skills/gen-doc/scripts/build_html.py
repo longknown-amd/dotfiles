@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Wrap a body fragment in the gen-doc reader skeleton: inline reader.css, build the side TOC.
 
-    build_html.py body.html out.html [--title "Page title"] [--theme dark|light]
+    build_html.py body.html out.html [--title "Page title"] [--theme dark|light] [--doc-type TYPE]
 
 The body fragment holds everything inside <main>: h1, .meta, .answer, sections with <h2 id=...>,
 and optionally <section class="appx"> with <details class="more" id=...> appendices.
@@ -44,6 +44,7 @@ def main():
     ap.add_argument('out')
     ap.add_argument('--title')
     ap.add_argument('--theme', choices=['dark', 'light'])
+    ap.add_argument('--doc-type', help='inserts <meta name="doc-type"> in <head>: report, design, postmortem, howto, reference, explanation, hub, personal or generated')
     ap.add_argument('--nav-label', action='append', default=[], help='id=Short label')
     a = ap.parse_args()
     body = Path(a.body).read_text(encoding='utf-8')
@@ -56,6 +57,8 @@ def main():
     css = (HERE / 'assets' / 'reader.css').read_text(encoding='utf-8')
     page = (page.replace('{{TITLE}}', html.escape(title)).replace('{{CSS}}', css)
                 .replace('{{NAV}}', build_nav(body, overrides)).replace('{{BODY}}', body))
+    if a.doc_type:
+        page = page.replace('</head>', '<meta name="doc-type" content="%s">\n</head>' % html.escape(a.doc_type, quote=True), 1)
     if a.theme:
         page = page.replace('<html lang="en">', '<html lang="en" data-theme="%s">' % a.theme, 1)
     Path(a.out).write_text(page, encoding='utf-8')

@@ -1,3 +1,4 @@
+<!-- doc-type: design -->
 # <!-- claim: the proposed design as a sentence, e.g. "Cache job logs in Redis to cut page load to 200 ms" -->
 
 *<Audience: reviewers> · <Status: draft/review/approved, YYYY-MM-DD> · <Scope: system or component>*

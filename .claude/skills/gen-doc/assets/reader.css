@@ -125,3 +125,43 @@ footer { color: var(--text-muted); font-size: 13px; margin-top: 64px; border-top
   details.more { display: block; } details.more > .more-body { display: block; }
   body { font-size: 12px; } figure, tr { break-inside: avoid; }
 }
+
+/* links: same colors as the doc center site. Internal blue, external violet with a north-east arrow.
+   CSS cannot tell hosts apart, so mark external links with class="ext". */
+a { color: #1f6fc9; }
+a.ext, a.ext:visited { color: #7e3fc4; }
+a.ext::after { content: "\2197"; font-size: .78em; margin-left: 2px; vertical-align: .15em; display: inline-block; text-decoration: none; }
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) a { color: #5b9cec; }
+  :root:where(:not([data-theme="light"])) a.ext, :root:where(:not([data-theme="light"])) a.ext:visited { color: #b79af2; }
+}
+:root[data-theme="dark"] a { color: #5b9cec; }
+:root[data-theme="dark"] a.ext, :root[data-theme="dark"] a.ext:visited { color: #b79af2; }
+nav.side a { color: var(--text-secondary); }
+
+/* callouts (markdown admonitions and .callout): one meaning per color, plus an icon and label so color is not the only cue */
+.admonition { --cv: var(--series-1); border: 1px solid var(--border); border-left: 4px solid var(--cv); border-radius: 0 10px 10px 0;
+  background: color-mix(in srgb, var(--cv) 7%, var(--surface-1)); padding: 10px 18px 12px; margin: 18px 0; }
+.admonition > .admonition-title { font-weight: 700; color: var(--text-primary); margin: 0 0 6px; max-width: none; }
+.admonition > .admonition-title::before { content: "ℹ"; display: inline-block; width: 1.4em; color: var(--cv); }
+.admonition.abstract, .admonition.summary, .admonition.success { --cv: var(--good); }
+.admonition.abstract > .admonition-title::before, .admonition.summary > .admonition-title::before, .admonition.success > .admonition-title::before { content: "✔"; }
+.admonition.abstract > .admonition-title + p { font-size: 18px; color: var(--text-primary); }
+.admonition.note, .admonition.info { --cv: var(--series-1); }
+.admonition.tip, .admonition.hint { --cv: #0f766e; }
+.admonition.tip > .admonition-title::before, .admonition.hint > .admonition-title::before { content: "✦"; }
+.admonition.warning, .admonition.caution, .admonition.attention { --cv: var(--warning); }
+.admonition.warning > .admonition-title::before, .admonition.caution > .admonition-title::before, .admonition.attention > .admonition-title::before { content: "⚠"; }
+.admonition.danger, .admonition.error, .admonition.failure, .admonition.bug { --cv: var(--critical); }
+.admonition.danger > .admonition-title::before, .admonition.error > .admonition-title::before, .admonition.failure > .admonition-title::before, .admonition.bug > .admonition-title::before { content: "✖"; }
+.admonition.example, .admonition.question { --cv: var(--series-4); }
+.admonition.example > .admonition-title::before { content: "▶"; }
+.admonition.question > .admonition-title::before { content: "?"; }
+.admonition.quote { --cv: var(--text-muted); }
+.admonition.quote > .admonition-title::before { content: "❝"; }
+.admonition > p:last-child, .admonition > ul:last-child, .admonition > ol:last-child { margin-bottom: 0; }
+.callout.tip { border-left-color: #0f766e; } .callout.danger { border-left-color: var(--critical); }
+/* answer / in-short box gets a faint green wash too */
+.answer { background: color-mix(in srgb, var(--good) 6%, var(--surface-1)); }
+/* table header tint, so tables read as one unit */
+th { background: color-mix(in srgb, var(--series-1) 6%, var(--surface-2)); }
