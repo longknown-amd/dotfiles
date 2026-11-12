@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{TITLE}}</title>
+<style>
+{{CSS}}
+</style>
+</head>
+<body>
+<div class="layout">
+<nav class="side">
+<p class="t">On this page</p>
+{{NAV}}
+<button class="ctl" id="themeBtn" type="button">Toggle theme</button>
+</nav>
+<main>
+{{BODY}}
+</main>
+</div>
+<script>
+(function () {
+  var root = document.documentElement;
+  document.getElementById('themeBtn').addEventListener('click', function () {
+    var dark = root.getAttribute('data-theme') === 'dark' ||
+      (!root.getAttribute('data-theme') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    root.setAttribute('data-theme', dark ? 'light' : 'dark');
+  });
+  function openTarget() {
+    var el = location.hash && document.getElementById(location.hash.slice(1));
+    while (el) { if (el.tagName === 'DETAILS') el.open = true; el = el.parentElement; }
+  }
+  window.addEventListener('hashchange', openTarget); openTarget();
+})();
+</script>
+</body>
+</html>

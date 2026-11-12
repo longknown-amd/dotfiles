@@ -1,0 +1,74 @@
+<h1>Claim title: the answer as a sentence</h1>
+<p class="meta"><span>Audience</span><span>Status, YYYY-MM-DD</span><span>Scope</span></p>
+
+<div class="answer" id="answer">
+<p class="rec">One-sentence recommendation with the key number.</p>
+<ol>
+<li>Finding one, with a number.</li>
+<li>Finding two, with a number.</li>
+<li>Finding three, with a number.</li>
+</ol>
+<p class="ask">Decision needed: what you ask the reader to approve.</p>
+</div>
+
+<h2 id="figures">Claim heading: which option wins and by how much</h2>
+<p class="lead">One sentence on where the numbers come from.</p>
+<div class="tablewrap">
+<table class="key">
+<thead><tr><th>Option</th><th class="num">Metric A</th><th class="num">Metric B</th><th class="num">Cost $</th></tr></thead>
+<tbody>
+<tr><th scope="row"><span class="dot s1"></span>Option one</th><td class="num win">1.70</td><td class="num">5</td><td class="num">23.17</td></tr>
+<tr><th scope="row"><span class="dot s2"></span>Option two</th><td class="num">2.40</td><td class="num win">7</td><td class="num win">20.92</td></tr>
+</tbody></table></div>
+<p class="tnote">▲ marks the best value in each column. Define Metric A and Metric B here.</p>
+
+<div class="legend"><span style="--c:var(--series-1)">Option one</span><span style="--c:var(--series-2)">Option two</span></div>
+<figure>
+<p class="chart-title">Action title: the takeaway, not the topic</p>
+<p class="chart-sub">x = what the bar length means; lower is better.</p>
+<!-- Draw SVGs at the rendered width (viewBox width about 860) so 13 px text stays 13 px; label values directly.
+     Bar scale: pick a plot width W (here 560 px from x=120) and draw bar = W * value / max(value); zero-based axis. -->
+<svg viewBox="0 0 860 90" role="img" aria-labelledby="barT">
+<title id="barT">Bar chart placeholder: option one 23.17 dollars, option two 20.92 dollars</title>
+<line class="baseline" x1="120" x2="120" y1="8" y2="82"/>
+<rect class="f-s1" x="120" y="14" width="560" height="26"/><text x="112" y="32" text-anchor="end" font-size="13">Option one</text><text x="688" y="32" font-size="13">$23.17</text>
+<rect class="f-s2" x="120" y="50" width="506" height="26"/><text x="112" y="68" text-anchor="end" font-size="13">Option two</text><text x="634" y="68" font-size="13">$20.92</text>
+</svg>
+</figure>
+<p>First sentence carries the point; support follows in two to four sentences.</p>
+<details class="more" id="scoreboard">
+<summary><span class="lbl">Full scoreboard</span> <span class="hint">what is inside, in a few words</span></summary>
+<div class="more-body">
+<p>All metrics, per-case rows and notes go here.</p>
+</div>
+</details>
+
+<h2 id="recs">Recommendations</h2>
+<h3>Claim: the action to take</h3>
+<p>Reason and evidence in two to four sentences, with the exception stated.</p>
+<details class="more" id="recs-full">
+<summary><span class="lbl">Full recommendations</span> <span class="hint">follow-ups and caps</span></summary>
+<div class="more-body">
+<p>Longer list with owners.</p>
+</div>
+</details>
+
+<h2 id="method">How we tested, and what limits the result</h2>
+<p>Setup, sample size, what was not covered, and which gaps could change the verdict.</p>
+
+<section class="appx">
+<h2 id="appendix">Appendices</h2>
+<p>Reference material for checking a number. Each part opens on click.</p>
+<details class="more" id="raw">
+<summary><span class="lbl">A. Raw data</span> <span class="hint">run list and logs</span></summary>
+<div class="more-body">
+<p>Placeholder.</p>
+</div>
+</details>
+<details class="more" id="fixes">
+<summary><span class="lbl">B. Follow-ups</span> <span class="hint">prioritized fixes</span></summary>
+<div class="more-body">
+<p>Placeholder.</p>
+</div>
+</details>
+</section>

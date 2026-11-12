@@ -48,30 +48,71 @@ and the nav in `~/docs/mkdocs.yml`. Map the doc to an existing folder, or create
 
 Before writing, run `git -C ~/docs pull --ff-only` so you start from the latest revision.
 
-## 2. Write the doc
+## 2. Plan the doc before writing
 
-- Use clear markdown with proper headings, tables and code blocks. Start with a level-1 heading (`# Title`).
-- Keep it reference-oriented (facts, architecture, code patterns), not a tutorial.
-- Include code snippets where they clarify behaviour. Cite `file:line` and the revision for anything taken from
-  a repo, because line numbers drift.
+Readers scan: most read only the headings and the first lines of each block. Decide what those lines say first.
+The rules and their sources are in `STYLE.md` in this skill's directory; read it before writing.
+
+1. **Pick one doc type** and keep it pure:
+
+   | Type | Template |
+   |---|---|
+   | Report, evaluation, investigation | `templates/report.md` |
+   | Design doc | `templates/design.md` |
+   | How-to | `templates/howto.md` |
+   | Reference | `templates/reference.md` |
+   | Explanation | `templates/explanation.md` |
+   | Postmortem | `templates/postmortem.md` |
+
+   If the material needs two types, write two pages and link them.
+2. **Write one line each for audience and purpose.** They become the meta line under the title.
+3. **Draft the answer block first** (and rewrite it last, once the body is done) (reports, design docs, postmortems). It has three parts:
+   - the verdict or recommendation in one sentence;
+   - 3–5 findings, each with a number;
+   - the decision or action needed.
+
+   A reader who stops after this block should still have the answer.
+4. **Size the template to the content.** Short docs (about one page) keep only the meta line, the answer block, one
+   or two claim sections, and "Method and limits". Template sections marked `optional` are dropped when there is
+   nothing honest to put in them; never write filler to fill a toggle.
+5. **Outline with claim headings.** Each heading states what the reader should conclude ("Opus costs 2.2x for the
+   same accuracy"), not a topic ("Results"). Order sections by importance; method, raw data and traces go last.
+
+## 3. Write the doc
+
+- Follow `STYLE.md` and fill in the template. Start with a level-1 heading (`# Title`) that states the answer.
+- Use prose by default and keep paragraphs short. Use bullets only for parallel items and tables for values the reader
+  will look up.
+- Keep one layer of detail behind each section: a short visible part, then a labeled "Full …" toggle. Put long tables,
+  logs and per-item traces in appendices.
+- Cite `file:line` and the revision for anything taken from a repo, because line numbers drift.
+- Check every number, path and command against its source. Keep each number identical everywhere it appears,
+  including any HTML version.
 - No emojis unless the user asks for them.
-- **Reader-first layout** for reports, evaluations and investigations:
-  1. **Summary first:** the question and answer in 2 lines, then 5-10 highlight bullets, then one key-figures
-     table with the numbers a decision rests on.
-  2. **Main body next:** scoreboard and charts, recommendations, setup, then the per-item details.
-  3. **Appendices last:** detailed findings, harness or tooling issues and fixes, caveats, and step-by-step traces
-     or raw logs. Collapse long traces (`<details>` in HTML).
-- Keep every number identical between the summary, the body and any HTML version generated from the same source.
-  Renumber cross-references ("see section N", "Appendix X") after reordering sections.
 
-## 3. Save to the central docs path
+**Self-contained HTML pages** (reports with charts, wide tables, collapsible appendices): don't hand-write CSS.
+
+1. Write only the body fragment, i.e. what goes inside `<main>`. Start from `templates/report-body.html`; the classes
+   are listed in `STYLE.md`.
+2. Wrap it:
+
+   ```sh
+   python3 ~/.claude/skills/gen-doc/scripts/build_html.py body.html ~/docs/docs/<section>/<name>.html
+   ```
+
+   This inlines `assets/reader.css` and generates the sticky side table of contents from the `<h2 id>` headings and the
+   appendix `<details id>` blocks.
+
+`examples/report-top.html` shows the approved format. The full worked example is in `examples/deep-debug-eval/`.
+
+## 4. Save to the central docs path
 
 Write the file to `~/docs/docs/<section>/<filename>.md` (lowercase, hyphenated filename).
 
 **Raw HTML pages** (self-contained or interactive) also go under `~/docs/docs/<section>/`. MkDocs copies them
-unchanged. Their nav entries must use an **absolute path** (see step 4).
+unchanged. Their nav entries must use an **absolute path** (see step 5).
 
-## 4. Update mkdocs.yml nav
+## 5. Update mkdocs.yml nav
 
 Read `~/docs/mkdocs.yml`, then add the new page under the matching nav section. Create a new top-level nav entry if
 the section doesn't exist.
@@ -82,7 +123,7 @@ the section doesn't exist.
     - "Some Explainer (interactive)": /some-section/explainer.html   # raw HTML: absolute path
 ```
 
-## 5. Update the landing page
+## 6. Update the landing page
 
 Read `~/docs/docs/index.md` and add a link to the new doc under the matching section. For a new section, add a
 heading and a one-line description.
@@ -90,7 +131,40 @@ heading and a one-line description.
 If `index.md` is missing sections that exist in the nav, mention that to the user and offer to fill the gap;
 don't do it silently.
 
-## 6. Local build check (optional)
+## 7. Review gate before staging
+
+Run every check here; each one catches something the others miss.
+
+1. **Cut.** Aim to remove about 30% of the first draft. Delete sentences that restate their paragraph, filler, and
+   the buzzwords and minimizers listed in `STYLE.md`.
+2. **Lint:**
+
+   ```sh
+   python3 ~/.claude/skills/gen-doc/scripts/check_doc.py <file>
+   ```
+
+   The linter only reports and never blocks. Fix every `warn` that applies. Tell the user which warnings you left
+   and why. `info` findings are judgment calls.
+3. **Look at it (HTML pages):**
+
+   ```sh
+   ~/.claude/skills/gen-doc/scripts/shot.sh <file.html> /tmp/<name>
+   ```
+
+   Then Read `/tmp/<name>-first.png`, `-full.png` and `-dark.png`. Check for wrapping cells, overlapping chart labels,
+   unreadable contrast, and an answer that isn't visible in the first screen.
+4. **Fresh-eyes test (reports, evaluations, design docs and postmortems only).** Run
+   `check_doc.py --first-screen <file>`. Give that output, and only that output, to a subagent (`model: haiku` for one-page docs, `model: sonnet` at low
+   effort otherwise), and ask it three things:
+   1. What is the conclusion?
+   2. What decision or action is asked of the reader?
+   3. Which section would you open to verify the main number?
+
+   If any answer is wrong or vague, rewrite the top of the doc and repeat.
+5. **Fact check.** Re-verify every number, path, command and cross-reference ("section N", "Appendix X") against its
+   source, especially after reordering sections.
+
+## 8. Local build check (optional)
 
 Only when `mkdocs` is available locally:
 
@@ -101,7 +175,7 @@ cd ~/docs && mkdocs build --strict --site-dir /tmp/docs-site-check
 If `mkdocs` isn't installed, skip this step. A build error then shows up as the push output from the hook, or as a
 stale page (see Troubleshooting).
 
-## 7. Stage, then ask before pushing
+## 9. Stage, then ask before pushing
 
 Stage the new or changed files but **don't commit or push automatically**:
 
@@ -128,7 +202,7 @@ The hook's `git pull` and `mkdocs build` output comes back as `remote:` lines in
 build errors. Some hosts print an authentication banner on SSH; that's noise. If `status -sb` still says `ahead`,
 retry the push (up to 3 times, a few seconds apart) before reporting a failure.
 
-## 8. Verify propagation
+## 10. Verify propagation
 
 Wait about 3 seconds, then confirm the new content is live, using a cache-buster:
 
@@ -142,7 +216,7 @@ The markdown page URL is `/<section>/<filename>/` (directory style); a raw HTML 
 `/<section>/<filename>.html`. A recent `Build Date UTC` confirms the rebuild ran. If the page returns 404, the
 string is missing, or the timestamp didn't advance, go to Troubleshooting.
 
-## 9. Report
+## 11. Report
 
 Tell the user:
 - the local file path
