@@ -62,7 +62,7 @@ return {
 
     {
         "nvim-telescope/telescope.nvim",
-        tag = '0.1.8',
+        -- no tag pin: 0.1.8 calls the deprecated vim.lsp.util.jump_to_location; plugins/telescope.lua tracks master
         dependencies = {
             { 'nvim-lua/plenary.nvim', lazy = true },
             { "nvim-telescope/telescope-fzf-native.nvim", build = "make" }, -- Faster fuzzy finder
