@@ -1,14 +1,3 @@
 {
-  "mcpServers": {
-    "cloud-atlassian": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "mcp-remote",
-        "https://mcp-platform.amd.com/mcp/cloud_atlassian",
-        "--header",
-        "Authorization: Basic Thomas.Huang@amd.com@${ATLASSIAN_MCP_TOKEN}"
-      ]
-    }
-  }
+  "mcpServers": {}
 }

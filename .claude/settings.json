@@ -13,7 +13,7 @@
       "TodoRead"
     ]
   },
-  "model": "sonnet",
+  "model": "opus",
   "disabledMcpjsonServers": [
     "cloud-atlassian",
     "onenote"
@@ -44,7 +44,13 @@
     "clangd-lsp@claude-plugins-official": true
   },
   "effortLevel": "high",
+  "modelSettings": {
+    "claude-opus-5-5": {
+      "effortLevel": "high"
+    }
+  },
   "tui": "fullscreen",
+  "skipWorkflowUsageWarning": true,
   "theme": "auto",
   "editorMode": "vim",
   "vim": true
