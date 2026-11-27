@@ -55,6 +55,40 @@ Readers fixate on headings (layer-cake pattern), so a heading should work as a o
 - Use descriptive link text that names the target.
 - Write for one specific reader and read the draft aloud. Cut about 30% of the first draft.
 
+## 3a. Explaining a code path with call trees
+
+Use this when a doc walks a reader through how control moves across functions, threads or libraries, e.g. "how a `hipFreeAsync` marker ends up blocked in DTIF". It works in explanations, and as a sub-section of a postmortem or report. `examples/call-tree-walkthrough.md` is the approved example; copy its shape.
+
+**Order of the parts:**
+
+1. **Actors table first.** Before any code, list the threads, processes or components that take part. Columns: who, what it does on this path, and its state in the case being explained (e.g. "blocked in `WaitForEvent`"). Readers then know whose stack each step runs on.
+2. **One overview diagram of the whole path.** A `text` code block, one numbered step per line, `(1)` … `(N)`. Put the actor name in a left column whenever control moves to another thread, and draw hand-offs between actors as arrows. End it at the outcome, e.g. "→ sem_wait forever".
+3. **State the roots once.** Repos, path prefixes and revisions (`clr` at `c9ee70b280`, DTIF `src/` at `ecd41d0`), so the trees can use short paths.
+4. **One sub-section per step,** in execution order, each with:
+   - **A numbered claim heading:** `#### 3. The doorbell is itself a DTIF command, served by the clock thread`. It says what happens and why it matters, not a function name.
+   - **2-5 sentences of why:** the condition, flag or value that makes this path happen (e.g. "flags `0`, so timing is enabled"), and anything surprising. Bold the one fact the reader must carry into later steps.
+   - **A short chain:** a 1-3 line `text` block, `A → B → C`, naming only the functions that matter.
+   - **A toggle with the full tree:** `<details markdown="1"><summary>Full call tree: step N</summary>`, holding the tree described below.
+5. **Close with evidence.** The last step's toggle shows the real stack (backtrace or trace) next to the tree. Say which frames match by symbol and which only by reading the code (e.g. stripped frames).
+6. **Mark the limits in the step itself:** "described, not cited" when the source is not available; "cannot cause X, because Y" when ruling out an alternative path.
+
+**Call-tree format** (inside the toggle):
+
+```text
+caller(args that matter)                                 repo/path/file.cpp:245
+├─ first callee                                          :311   one short note: value, condition, why
+├─ second callee → step 3                                :312
+└─ third callee                                          other/file.cpp:99
+   └─ nested call                                        :1302 → WaitForEvent :239   ◀ blocked
+(not reached) the code after the block                   :3081-3083
+```
+
+- One call per line, in execution order. Indent children with `├─`, `└─` and `│`.
+- Align `file:line` in one column. After the first full path, write only `:line` for the same file.
+- Show arguments only when their values matter (`TCoreWriteRegister(0xec26, 1)`). Annotate decisions inline (`→ true`, `flag false → pass`).
+- Cross-link steps with `→ step N`. Mark where execution stops with `◀`, and list code that never runs as "(not reached)".
+- Check every line number against the exact revision. A tree with a wrong line misleads more than prose does.
+
 ## 4. Data: tables and charts
 
 - Use a table to look up exact values and a chart to show shape or trend (Few).
@@ -147,6 +181,7 @@ Readers need neutral text and color that means something. The site applies color
 - [ ] Tables have 7 columns or fewer, aligned numbers and a note defining marks
 - [ ] Every number, path and command verified against its source and identical everywhere
 - [ ] Cross-references ("section N", "Appendix X") resolve; acronyms defined
+- [ ] Code-path walkthroughs follow section 3a: actors table, numbered overview, then per step a claim heading, a short chain and a "Full call tree" toggle; evidence last
 - [ ] Cut pass done; `scripts/check_doc.py` run; HTML screenshot checked
 
 ## 9. Sources

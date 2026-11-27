@@ -91,6 +91,10 @@ The rules and their sources are in `STYLE.md` in this skill's directory; read it
 - Keep one layer of detail behind each section: a short visible part, then a labeled "Full …" toggle. Put long tables,
   logs and per-item traces in appendices.
 - Cite `file:line` and the revision for anything taken from a repo, because line numbers drift.
+- **Walking through a code path** (how a call travels across functions, threads or libraries): use the call-tree
+  format in `STYLE.md` section 3a. That means an actors table, a numbered overview diagram, then one step per section
+  with a claim heading, a short `A → B → C` chain and a "Full call tree: step N" toggle, with evidence last.
+  `examples/call-tree-walkthrough.md` is the approved example.
 - Check every number, path and command against its source. Keep each number identical everywhere it appears,
   including any HTML version.
 - No emojis unless the user asks for them.

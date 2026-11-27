@@ -15,6 +15,9 @@
 ## <!-- what happens end to end, e.g. "A store travels decode → issue → SQ → TA adapter → VCA" -->
 
 <!-- the big picture: one diagram or a numbered flow; name the running example used in every later section -->
+<!-- if the flow crosses functions/threads/libraries, use STYLE.md section 3a: an actors table, a numbered overview,
+     then per step a claim heading + short "A → B → C" chain + "Full call tree: step N" toggle
+     (see examples/call-tree-walkthrough.md) -->
 
 ## <!-- step 1 as a claim about what happens, e.g. "Decode marks the instruction as a VMEM write" -->
 
